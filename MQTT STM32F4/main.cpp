@@ -93,7 +93,7 @@ int main()
 
         char strPayload[64];
         float potValue = pot;
-        sprintf(strPayload, "%.1f", (potValue*100));
+        sprintf(strPayload, "%.5f", (potValue));
         cout << "Publish payload \"" << strPayload << "\" with topic f429/potValue" << endl;
 
         MQTT::Message msg;

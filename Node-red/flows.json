@@ -1,0 +1,169 @@
+[
+    {
+        "id": "508bfdfd6e350e6a",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "c6adcf262d7df0e2",
+        "type": "tls-config",
+        "name": "",
+        "cert": "",
+        "key": "",
+        "ca": "",
+        "certname": "",
+        "keyname": "",
+        "caname": "CA_cert.cert",
+        "servername": "",
+        "verifyservercert": false,
+        "alpnprotocol": ""
+    },
+    {
+        "id": "8e91f29796d3acfe",
+        "type": "mqtt-broker",
+        "name": "MQTT",
+        "broker": "40c06ef97ec5427eb54aa49e5c03c12c.s1.eu.hivemq.cloud",
+        "port": "8883",
+        "tls": "c6adcf262d7df0e2",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": true,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "c237e9df2e9a46b0",
+        "type": "http in",
+        "z": "508bfdfd6e350e6a",
+        "name": "",
+        "url": "/publish-to-mqtt",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 180,
+        "y": 140,
+        "wires": [
+            [
+                "46a1282300af95a5"
+            ]
+        ]
+    },
+    {
+        "id": "46a1282300af95a5",
+        "type": "function",
+        "z": "508bfdfd6e350e6a",
+        "name": "function 1",
+        "func": "msg.payload = msg.payload.message || \"Default Message\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 140,
+        "wires": [
+            [
+                "26023453f8bc08ce"
+            ]
+        ]
+    },
+    {
+        "id": "26023453f8bc08ce",
+        "type": "mqtt out",
+        "z": "508bfdfd6e350e6a",
+        "name": "",
+        "topic": "esp32/test",
+        "qos": "1",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "8e91f29796d3acfe",
+        "x": 610,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "248f4ed60a5f2f6b",
+        "type": "mqtt in",
+        "z": "508bfdfd6e350e6a",
+        "name": "",
+        "topic": "esp32/test",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "8e91f29796d3acfe",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 180,
+        "y": 240,
+        "wires": [
+            [
+                "b0ea8ef7c5672ef9"
+            ]
+        ]
+    },
+    {
+        "id": "af50c569c0c72b63",
+        "type": "debug",
+        "z": "508bfdfd6e350e6a",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 600,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "b0ea8ef7c5672ef9",
+        "type": "function",
+        "z": "508bfdfd6e350e6a",
+        "name": "function 2",
+        "func": "msg.payload = msg.payload.message || \"Default Message\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 403.1999816894531,
+        "y": 245.1999969482422,
+        "wires": [
+            [
+                "af50c569c0c72b63"
+            ]
+        ]
+    }
+]
