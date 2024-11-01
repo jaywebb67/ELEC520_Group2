@@ -426,5 +426,44 @@
                 "file": "/usr/src/node-red/node_modules/@node-red/nodes/core/storage/23-watch.js"
             }
         }
+    },
+    "node-red-mysql-r2": {
+        "name": "node-red-mysql-r2",
+        "version": "1.3.0",
+        "local": true,
+        "user": true,
+        "nodes": {
+            "mysql-r2": {
+                "name": "mysql-r2",
+                "types": [
+                    "mysql-r2"
+                ],
+                "enabled": true,
+                "local": true,
+                "user": false,
+                "module": "node-red-mysql-r2",
+                "file": "/data/node_modules/node-red-mysql-r2/mysql-r2.js"
+            }
+        }
+    },
+    "node-red-node-mysql": {
+        "name": "node-red-node-mysql",
+        "version": "2.0.0",
+        "local": true,
+        "user": true,
+        "nodes": {
+            "mysql": {
+                "name": "mysql",
+                "types": [
+                    "MySQLdatabase",
+                    "mysql"
+                ],
+                "enabled": true,
+                "local": true,
+                "user": false,
+                "module": "node-red-node-mysql",
+                "file": "/data/node_modules/node-red-node-mysql/68-mysql.js"
+            }
+        }
     }
 }

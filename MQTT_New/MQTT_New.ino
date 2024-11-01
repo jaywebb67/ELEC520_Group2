@@ -51,7 +51,7 @@ struct MqttMessage {
 // MQTT server details
 const char* mqttServer = "40c06ef97ec5427eb54aa49e5c03c12c.s1.eu.hivemq.cloud";  // MQTT broker IP or URL
 const int mqttPort = 8883;                    // Port for secure MQTT (typically 8883)
-
+String clientId = "";
 // WiFi credentials
 // Update these with values suitable for your network.
 const char* ssid = "BT-CJC2PH";       // your network SSID (WiFi name)
@@ -117,26 +117,62 @@ void setClock() {
   Serial.print(asctime(&timeinfo));
 }
 
-void reconnect() {
-  // Loop until we're reconnected
+void reconnect(int onSetUp) {
+  // Check if `deviceID.txt` exists in LittleFS
+  if (LittleFS.exists("/deviceID.txt")) {
+    // Open the file in read mode
+    File file = LittleFS.open("/deviceID.txt", "r");
+    if (file) {
+      // Read the device ID from the file and set it as `clientID`
+      clientId = file.readStringUntil('\n');  // Read the device ID as a String
+      clientId.trim();  // Remove any trailing newline or whitespace
+      file.close();
+      Serial.println("Loaded client ID from deviceID.txt: " + clientId);
+    } else {
+      Serial.println("Failed to open deviceID.txt for reading.");
+    }
+  } else {
+    // If `deviceID.txt` does not exist, generate a random client ID
+    clientId = "Gate" + String(random(0xffff), HEX);
+    Serial.println("No deviceID.txt found. Generated random client ID: " + clientId);
+  }
+  if(mqttClient.connected()){
+    mqttClient.disconnect();
+    delay(500);
+  }
+
+  // Attempt to connect to the MQTT broker with the client ID
   while (!mqttClient.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    // Attempt to connect
-    if (mqttClient.connect("esp32","esp32","sub123")) {
+    Serial.print("Attempting MQTT connection with clientId: ");
+    Serial.println(clientId);
+    if (mqttClient.connect(clientId.c_str(), "esp32", "sub123")) {
       Serial.println("connected");
-      // Once connected, publish an announcement...
-      //client.publish("outTopic","hello world");
-      // ... and resubscribe
-      mqttClient.subscribe("esp32/test",1);
+
+      // Subscribe to relevant topics based on setup phase
+      if (!LittleFS.exists("/deviceID.txt")){
+          mqttClient.subscribe("ELEC520/devices/update", 1);
+          mqttClient.publish("ELEC520/devices/view", "Gate");
+      }
+      if (onSetUp) {
+        mqttClient.subscribe("ELEC520/users/update", 1);
+        mqttClient.publish("ELEC520/users/view","View Users");
+        
+      }
+      vTaskDelay(pdMS_TO_TICKS(5000));  // Delay for 1 seconds (10000 ms)
+      mqttClient.subscribe("ELEC520/#",1);
+      
+
     } else {
       Serial.print("failed, rc=");
       Serial.print(mqttClient.state());
       Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
       delay(5000);
     }
   }
 }
+
+
+
 void getInput(){
   key = keypad.getKey();
   if (key){
@@ -184,7 +220,13 @@ void checkPassword() {
     bool matchFound = false;
     while (file.available()) {
         String line = file.readStringUntil('\n');
+        //Serial.print("Read line: ");
+        //Serial.println(line);  // Debug line to check format
+
         int delimiterPos = line.indexOf(':');
+        if (delimiterPos == -1) {
+            continue; // Skip invalid lines
+        }
         
         // Extract username and password from the line
         String username = line.substring(0, delimiterPos);
@@ -195,7 +237,8 @@ void checkPassword() {
         if (strcmp(currentInput, password.c_str()) == 0) {
             lcd.print("     Granted    ");
             String message = username + " logged in";  // Customize message for MQTT
-            mqttClient.publish("esp32/test", message.c_str());  // Publish username
+            mqttClient.publish("ELEC520/test", message.c_str());  // Publish username
+            mqttClient.publish("ELEC520/alarm", "Alarm Disabled");  // Publish username
             matchFound = true;
             delay(1000);
             break;
@@ -206,6 +249,7 @@ void checkPassword() {
 
     if (!matchFound) {
         lcd.print("     Denied     ");
+        mqttClient.publish("ELEC520/alarm", "Alarm Enabled");  // Publish username
         delay(1000);
     }
 
@@ -213,6 +257,7 @@ void checkPassword() {
     memset(currentInput, 0, sizeof(currentInput));
     idx = 0;
 }
+
 
 
 
@@ -246,9 +291,85 @@ void mqttHandler(void* pvParameters) {
       Serial.print("Processing message on Core 0 - Topic: ");
       Serial.print(receivedMsg.topic);
       Serial.print(", Message: ");
-      Serial.println(receivedMsg.payload);
+
       
       // Add additional processing code here if needed
+      // Check if the message is for adding a new user credential
+      if (receivedMsg.topic == "ELEC520/users/add") {
+        Serial.println(receivedMsg.payload);
+        // Open the credentials file in append mode
+        File file = LittleFS.open("/userCredentials.txt", "a");
+        
+        if (file) {
+          // Write the payload in 'user:password' format to the file
+          file.println(receivedMsg.payload); // Each entry goes on a new line
+          file.flush();  // Ensure data is written immediately
+          Serial.println("User credential added to file.");
+          file.close();
+        } else {
+          Serial.println("Failed to open userCredential.txt for appending.");
+        }
+      }
+
+      else if (receivedMsg.topic == "ELEC520/devices/update") {
+        Serial.println(receivedMsg.payload);
+        // Open the credentials file in append mode
+        File file = LittleFS.open("/deviceID.txt", "w");
+        if (file) {
+          // Write the payload in 'user:password' format to the file
+          file.println(receivedMsg.payload); // Each entry goes on a new line
+          file.flush();  // Ensure data is written immediately
+          Serial.println("Device ID written to file: " + receivedMsg.payload);
+          clientId = receivedMsg.payload;
+          delay(100);
+          file.close();
+          return;
+        } else {
+          Serial.println("Failed to open and write 'deviceID.txt'.");
+        }
+        file.close();
+        esp_restart();
+      }
+      else if (receivedMsg.topic == "ELEC520/users/update") {
+          Serial.println(receivedMsg.payload);
+          // Open the credentials file in write mode (this will overwrite the file)
+          File file = LittleFS.open("/userCredentials.txt", "w");
+
+          if (file) {
+              // Split the payload by '\n' to separate each 'user:password' pair
+              int start = 0;
+              int separatorIndex = 0;
+
+              while ((separatorIndex = receivedMsg.payload.indexOf('\n', start)) != -1) {
+                  // Extract each 'user:password' pair
+                  String userPassPair = receivedMsg.payload.substring(start, separatorIndex);
+                  Serial.println("Writing pair: " + userPassPair);  // Debugging output
+
+                  // Write the pair to the file on a new line
+                  file.println(userPassPair);
+
+                  // Move the start index past the last newline character
+                  start = separatorIndex + 1;
+              }
+
+              // Write the last 'user:password' pair if there's any left after the last newline
+              if (start < receivedMsg.payload.length()) {
+                  file.println(receivedMsg.payload.substring(start));
+              }
+
+              file.flush();  // Ensure all data is written to storage
+              Serial.println("User credentials updated in file.");
+              file.close();
+          } else {
+              Serial.println("Failed to open /userCredentials.txt for writing.");
+          }
+      }
+      else if (receivedMsg.topic == "ELEC520/test") {
+        Serial.println(receivedMsg.payload);
+      }
+      else if (receivedMsg.topic == "ELEC520/alarm") {
+        Serial.println(receivedMsg.payload);
+      }
     }
   }
 }
@@ -307,13 +428,14 @@ void setup() {
     1,                // Priority of the task
     NULL,             // Task handle
     0);               // Core 1
+    reconnect(1);
 }
 
 
 void loop() {
   // your code to interact with the server here
   if (!mqttClient.connected()) {
-    reconnect();
+    reconnect(0);
   }
   if (idx < passwordMaxLength){
       getInput();

@@ -1,0 +1,121 @@
+0 verbose cli /usr/local/bin/node /usr/local/bin/npm
+1 info using npm@10.8.2
+2 info using node@v20.18.0
+3 silly config load:file:/usr/local/lib/node_modules/npm/npmrc
+4 silly config load:file:/data/.npmrc
+5 silly config load:file:/usr/src/node-red/.npmrc
+6 silly config load:file:/usr/local/etc/npmrc
+7 verbose title npm install node-red-mysql-r2@1.3.0
+8 verbose argv "install" "--no-audit" "--no-update-notifier" "--no-fund" "--save" "--save-prefix" "~" "--omit" "dev" "--engine-strict" "node-red-mysql-r2@1.3.0"
+9 verbose logfile logs-max:10 dir:/data/.npm/_logs/2024-10-31T14_11_01_692Z-
+10 verbose logfile /data/.npm/_logs/2024-10-31T14_11_01_692Z-debug-0.log
+11 silly packumentCache heap:2197815296 maxSize:549453824 maxEntrySize:274726912
+12 silly logfile done cleaning log files
+13 silly idealTree buildDeps
+14 silly fetch manifest node-red-mysql-r2@1.3.0
+15 silly packumentCache full:https://registry.npmjs.org/node-red-mysql-r2 cache-miss
+16 http fetch GET 200 https://registry.npmjs.org/node-red-mysql-r2 894ms (cache miss)
+17 silly packumentCache full:https://registry.npmjs.org/node-red-mysql-r2 set size:undefined disposed:false
+18 silly placeDep ROOT node-red-mysql-r2@1.3.0 OK for: node-red-project@0.0.1 want: 1.3.0
+19 silly fetch manifest mysql@^2.18.1
+20 silly packumentCache full:https://registry.npmjs.org/mysql cache-miss
+21 http fetch GET 200 https://registry.npmjs.org/mysql 134ms (cache miss)
+22 silly packumentCache full:https://registry.npmjs.org/mysql set size:undefined disposed:false
+23 silly placeDep ROOT mysql@2.18.1 OK for: node-red-mysql-r2@1.3.0 want: ^2.18.1
+24 silly fetch manifest bignumber.js@9.0.0
+25 silly packumentCache full:https://registry.npmjs.org/bignumber.js cache-miss
+26 silly fetch manifest readable-stream@2.3.7
+27 silly packumentCache full:https://registry.npmjs.org/readable-stream cache-miss
+28 silly fetch manifest safe-buffer@5.1.2
+29 silly packumentCache full:https://registry.npmjs.org/safe-buffer cache-miss
+30 silly fetch manifest sqlstring@2.3.1
+31 silly packumentCache full:https://registry.npmjs.org/sqlstring cache-miss
+32 http fetch GET 200 https://registry.npmjs.org/sqlstring 158ms (cache miss)
+33 silly packumentCache full:https://registry.npmjs.org/sqlstring set size:undefined disposed:false
+34 http fetch GET 200 https://registry.npmjs.org/bignumber.js 312ms (cache miss)
+35 silly packumentCache full:https://registry.npmjs.org/bignumber.js set size:undefined disposed:false
+36 http fetch GET 200 https://registry.npmjs.org/readable-stream 314ms (cache miss)
+37 silly packumentCache full:https://registry.npmjs.org/readable-stream set size:undefined disposed:false
+38 http fetch GET 200 https://registry.npmjs.org/safe-buffer 316ms (cache miss)
+39 silly packumentCache full:https://registry.npmjs.org/safe-buffer set size:undefined disposed:false
+40 silly placeDep ROOT bignumber.js@9.0.0 OK for: mysql@2.18.1 want: 9.0.0
+41 silly placeDep ROOT readable-stream@2.3.7 OK for: mysql@2.18.1 want: 2.3.7
+42 silly placeDep ROOT safe-buffer@5.1.2 OK for: mysql@2.18.1 want: 5.1.2
+43 silly placeDep ROOT sqlstring@2.3.1 OK for: mysql@2.18.1 want: 2.3.1
+44 silly fetch manifest core-util-is@~1.0.0
+45 silly packumentCache full:https://registry.npmjs.org/core-util-is cache-miss
+46 silly fetch manifest inherits@~2.0.3
+47 silly packumentCache full:https://registry.npmjs.org/inherits cache-miss
+48 silly fetch manifest isarray@~1.0.0
+49 silly packumentCache full:https://registry.npmjs.org/isarray cache-miss
+50 silly fetch manifest process-nextick-args@~2.0.0
+51 silly packumentCache full:https://registry.npmjs.org/process-nextick-args cache-miss
+52 silly fetch manifest safe-buffer@~5.1.1
+53 silly packumentCache full:https://registry.npmjs.org/safe-buffer cache-miss
+54 silly fetch manifest string_decoder@~1.1.1
+55 silly packumentCache full:https://registry.npmjs.org/string_decoder cache-miss
+56 silly fetch manifest util-deprecate@~1.0.1
+57 silly packumentCache full:https://registry.npmjs.org/util-deprecate cache-miss
+58 http fetch GET 200 https://registry.npmjs.org/safe-buffer 58ms (cache hit)
+59 silly packumentCache full:https://registry.npmjs.org/safe-buffer set size:41183 disposed:false
+60 http fetch GET 200 https://registry.npmjs.org/core-util-is 113ms (cache miss)
+61 silly packumentCache full:https://registry.npmjs.org/core-util-is set size:undefined disposed:false
+62 http fetch GET 200 https://registry.npmjs.org/util-deprecate 106ms (cache miss)
+63 silly packumentCache full:https://registry.npmjs.org/util-deprecate set size:undefined disposed:false
+64 http fetch GET 200 https://registry.npmjs.org/isarray 117ms (cache miss)
+65 silly packumentCache full:https://registry.npmjs.org/isarray set size:undefined disposed:false
+66 http fetch GET 200 https://registry.npmjs.org/process-nextick-args 156ms (cache miss)
+67 silly packumentCache full:https://registry.npmjs.org/process-nextick-args set size:undefined disposed:false
+68 http fetch GET 200 https://registry.npmjs.org/inherits 253ms (cache miss)
+69 silly packumentCache full:https://registry.npmjs.org/inherits set size:undefined disposed:false
+70 http fetch GET 200 https://registry.npmjs.org/string_decoder 252ms (cache miss)
+71 silly packumentCache full:https://registry.npmjs.org/string_decoder set size:undefined disposed:false
+72 silly placeDep ROOT core-util-is@1.0.3 OK for: readable-stream@2.3.7 want: ~1.0.0
+73 silly placeDep ROOT inherits@2.0.4 OK for: readable-stream@2.3.7 want: ~2.0.3
+74 silly placeDep ROOT isarray@1.0.0 OK for: readable-stream@2.3.7 want: ~1.0.0
+75 silly placeDep ROOT process-nextick-args@2.0.1 OK for: readable-stream@2.3.7 want: ~2.0.0
+76 silly placeDep ROOT string_decoder@1.1.1 OK for: readable-stream@2.3.7 want: ~1.1.1
+77 silly placeDep ROOT util-deprecate@1.0.2 OK for: readable-stream@2.3.7 want: ~1.0.1
+78 silly reify moves {}
+79 silly tarball no local data for process-nextick-args@https://registry.npmjs.org/process-nextick-args/-/process-nextick-args-2.0.1.tgz. Extracting by manifest.
+80 silly tarball no local data for isarray@https://registry.npmjs.org/isarray/-/isarray-1.0.0.tgz. Extracting by manifest.
+81 silly tarball no local data for safe-buffer@https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.1.2.tgz. Extracting by manifest.
+82 silly tarball no local data for util-deprecate@https://registry.npmjs.org/util-deprecate/-/util-deprecate-1.0.2.tgz. Extracting by manifest.
+83 silly tarball no local data for core-util-is@https://registry.npmjs.org/core-util-is/-/core-util-is-1.0.3.tgz. Extracting by manifest.
+84 silly tarball no local data for string_decoder@https://registry.npmjs.org/string_decoder/-/string_decoder-1.1.1.tgz. Extracting by manifest.
+85 silly tarball no local data for inherits@https://registry.npmjs.org/inherits/-/inherits-2.0.4.tgz. Extracting by manifest.
+86 silly tarball no local data for readable-stream@https://registry.npmjs.org/readable-stream/-/readable-stream-2.3.7.tgz. Extracting by manifest.
+87 silly tarball no local data for sqlstring@https://registry.npmjs.org/sqlstring/-/sqlstring-2.3.1.tgz. Extracting by manifest.
+88 silly tarball no local data for bignumber.js@https://registry.npmjs.org/bignumber.js/-/bignumber.js-9.0.0.tgz. Extracting by manifest.
+89 silly tarball no local data for node-red-mysql-r2@https://registry.npmjs.org/node-red-mysql-r2/-/node-red-mysql-r2-1.3.0.tgz. Extracting by manifest.
+90 silly tarball no local data for mysql@https://registry.npmjs.org/mysql/-/mysql-2.18.1.tgz. Extracting by manifest.
+91 http fetch GET 200 https://registry.npmjs.org/isarray/-/isarray-1.0.0.tgz 153ms (cache miss)
+92 http fetch GET 200 https://registry.npmjs.org/process-nextick-args/-/process-nextick-args-2.0.1.tgz 164ms (cache miss)
+93 http fetch GET 200 https://registry.npmjs.org/util-deprecate/-/util-deprecate-1.0.2.tgz 176ms (cache miss)
+94 http fetch GET 200 https://registry.npmjs.org/core-util-is/-/core-util-is-1.0.3.tgz 177ms (cache miss)
+95 http fetch GET 200 https://registry.npmjs.org/string_decoder/-/string_decoder-1.1.1.tgz 180ms (cache miss)
+96 http fetch GET 200 https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.1.2.tgz 185ms (cache miss)
+97 http fetch GET 200 https://registry.npmjs.org/inherits/-/inherits-2.0.4.tgz 287ms (cache miss)
+98 http fetch GET 200 https://registry.npmjs.org/sqlstring/-/sqlstring-2.3.1.tgz 294ms (cache miss)
+99 http fetch GET 200 https://registry.npmjs.org/readable-stream/-/readable-stream-2.3.7.tgz 387ms (cache miss)
+100 http fetch GET 200 https://registry.npmjs.org/node-red-mysql-r2/-/node-red-mysql-r2-1.3.0.tgz 707ms (cache miss)
+101 http fetch GET 200 https://registry.npmjs.org/bignumber.js/-/bignumber.js-9.0.0.tgz 751ms (cache miss)
+102 http fetch GET 200 https://registry.npmjs.org/mysql/-/mysql-2.18.1.tgz 763ms (cache miss)
+103 silly ADD node_modules/util-deprecate
+104 silly ADD node_modules/string_decoder
+105 silly ADD node_modules/process-nextick-args
+106 silly ADD node_modules/isarray
+107 silly ADD node_modules/inherits
+108 silly ADD node_modules/core-util-is
+109 silly ADD node_modules/sqlstring
+110 silly ADD node_modules/safe-buffer
+111 silly ADD node_modules/readable-stream
+112 silly ADD node_modules/bignumber.js
+113 silly ADD node_modules/mysql
+114 silly ADD node_modules/node-red-mysql-r2
+115 verbose cwd /data
+116 verbose os Linux 5.15.153.1-microsoft-standard-WSL2
+117 verbose node v20.18.0
+118 verbose npm  v10.8.2
+119 verbose exit 0
+120 info ok

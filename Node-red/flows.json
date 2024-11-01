@@ -54,80 +54,14 @@
         "sessionExpiry": ""
     },
     {
-        "id": "c237e9df2e9a46b0",
-        "type": "http in",
-        "z": "508bfdfd6e350e6a",
-        "name": "",
-        "url": "/publish-to-mqtt",
-        "method": "post",
-        "upload": false,
-        "swaggerDoc": "",
-        "x": 180,
-        "y": 140,
-        "wires": [
-            [
-                "46a1282300af95a5"
-            ]
-        ]
-    },
-    {
-        "id": "46a1282300af95a5",
-        "type": "function",
-        "z": "508bfdfd6e350e6a",
-        "name": "function 1",
-        "func": "msg.payload = msg.payload.message || \"Default Message\";\nreturn msg;",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 400,
-        "y": 140,
-        "wires": [
-            [
-                "26023453f8bc08ce"
-            ]
-        ]
-    },
-    {
-        "id": "26023453f8bc08ce",
-        "type": "mqtt out",
-        "z": "508bfdfd6e350e6a",
-        "name": "",
-        "topic": "esp32/test",
-        "qos": "1",
-        "retain": "",
-        "respTopic": "",
-        "contentType": "",
-        "userProps": "",
-        "correl": "",
-        "expiry": "",
-        "broker": "8e91f29796d3acfe",
-        "x": 610,
-        "y": 140,
-        "wires": []
-    },
-    {
-        "id": "248f4ed60a5f2f6b",
-        "type": "mqtt in",
-        "z": "508bfdfd6e350e6a",
-        "name": "",
-        "topic": "esp32/test",
-        "qos": "1",
-        "datatype": "auto-detect",
-        "broker": "8e91f29796d3acfe",
-        "nl": false,
-        "rap": true,
-        "rh": 0,
-        "inputs": 0,
-        "x": 180,
-        "y": 240,
-        "wires": [
-            [
-                "b0ea8ef7c5672ef9"
-            ]
-        ]
+        "id": "4065fc3ce7257f26",
+        "type": "MySQLdatabase",
+        "name": "ELEC520 Database",
+        "host": "192.168.1.226",
+        "port": "3306",
+        "db": "ELEC520_database",
+        "tz": "",
+        "charset": "UTF8"
     },
     {
         "id": "af50c569c0c72b63",
@@ -151,19 +85,259 @@
         "type": "function",
         "z": "508bfdfd6e350e6a",
         "name": "function 2",
-        "func": "msg.payload = msg.payload.message || \"Default Message\";\nreturn msg;",
+        "func": "msg.payload;\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 403.1999816894531,
-        "y": 245.1999969482422,
+        "x": 400,
+        "y": 240,
         "wires": [
             [
                 "af50c569c0c72b63"
             ]
+        ]
+    },
+    {
+        "id": "248f4ed60a5f2f6b",
+        "type": "mqtt in",
+        "z": "508bfdfd6e350e6a",
+        "name": "",
+        "topic": "esp32/test",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "8e91f29796d3acfe",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 180,
+        "y": 240,
+        "wires": [
+            [
+                "b0ea8ef7c5672ef9"
+            ]
+        ]
+    },
+    {
+        "id": "6c72b712f0822f0b",
+        "type": "mysql",
+        "z": "508bfdfd6e350e6a",
+        "mydb": "4065fc3ce7257f26",
+        "name": "Elec520 DB",
+        "x": 470,
+        "y": 560,
+        "wires": [
+            [
+                "1e8caae564e51d2a"
+            ]
+        ]
+    },
+    {
+        "id": "af8a1148aafa94e2",
+        "type": "mqtt in",
+        "z": "508bfdfd6e350e6a",
+        "name": "",
+        "topic": "ELEC520/users/view",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "8e91f29796d3acfe",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 110,
+        "y": 560,
+        "wires": [
+            [
+                "7d6296b04c45ea31"
+            ]
+        ]
+    },
+    {
+        "id": "7d6296b04c45ea31",
+        "type": "function",
+        "z": "508bfdfd6e350e6a",
+        "name": "function 7",
+        "func": "msg.topic = 'SELECT * FROM users;';\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 300,
+        "y": 560,
+        "wires": [
+            [
+                "6c72b712f0822f0b"
+            ]
+        ]
+    },
+    {
+        "id": "1e8caae564e51d2a",
+        "type": "function",
+        "z": "508bfdfd6e350e6a",
+        "name": "function 8",
+        "func": "// Check if msg.payload contains an array of user data\nif (Array.isArray(msg.payload)) {\n    // Map through the results and format as 'user:password'\n    const formattedPayload = msg.payload.map(row => `${row.username}:${row.password}`).join('\\n');\n    \n    // Set the formatted string as the new payload\n    msg.payload = formattedPayload;\n}\n\n// Return the modified message\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 660,
+        "y": 560,
+        "wires": [
+            [
+                "41f6bdbc2860ba09"
+            ]
+        ]
+    },
+    {
+        "id": "0d2b572b07bed7d7",
+        "type": "mqtt in",
+        "z": "508bfdfd6e350e6a",
+        "name": "",
+        "topic": "ELEC520/devices/view",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "8e91f29796d3acfe",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 120,
+        "y": 640,
+        "wires": [
+            [
+                "42ee326f56b265f1"
+            ]
+        ]
+    },
+    {
+        "id": "42ee326f56b265f1",
+        "type": "function",
+        "z": "508bfdfd6e350e6a",
+        "name": "function 4",
+        "func": "const deviceType = msg.payload; // Get device type from the MQTT payload\n\n// SQL query to count the number of entries for the given device type\nmsg.topic = `SELECT COUNT(*) AS count FROM devices WHERE device_type = ?`;\nmsg.payload = [deviceType]; // Prepared statement format for MySQL\nmsg.deviceType = deviceType;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 640,
+        "wires": [
+            [
+                "188b575a530e2108"
+            ]
+        ]
+    },
+    {
+        "id": "188b575a530e2108",
+        "type": "mysql",
+        "z": "508bfdfd6e350e6a",
+        "mydb": "4065fc3ce7257f26",
+        "name": "Elec520 DB",
+        "x": 450,
+        "y": 700,
+        "wires": [
+            [
+                "d238f8ea27419c40"
+            ]
+        ]
+    },
+    {
+        "id": "d238f8ea27419c40",
+        "type": "function",
+        "z": "508bfdfd6e350e6a",
+        "name": "function 9",
+        "func": "const deviceType = msg.deviceType; // The original device type from the MQTT input\nconst count = msg.payload[0].count; // Extract count from the SQL result payload\n\n// Increment the count for the new device\nconst newCount = count + 1;\n\n// Create the new device ID in the format DeviceTypeNo, e.g., Gate1\nconst newDeviceID = `${deviceType}${newCount}`;\nmsg.topic = `INSERT INTO devices (device_type, deviceID) VALUES (?, ?)`;\nmsg.payload = [deviceType, newDeviceID]; // Pass parameters as an array for prepared statements\n\n// Save the new device ID in msg.newDeviceID for the next step\nmsg.newDeviceID = newDeviceID;\n\nreturn msg;\n\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 640,
+        "wires": [
+            [
+                "44b43098527839c1",
+                "f268a7e4dece6d64"
+            ]
+        ]
+    },
+    {
+        "id": "f268a7e4dece6d64",
+        "type": "function",
+        "z": "508bfdfd6e350e6a",
+        "name": "function 10",
+        "func": "msg.topic = 'ELEC520/devices/update';\n\nconst deviceID = msg.newDeviceID; \nmsg.payload = deviceID; // Use the new device ID created in the previous function\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 750,
+        "y": 720,
+        "wires": [
+            [
+                "c2320afcfc22378e"
+            ]
+        ]
+    },
+    {
+        "id": "c2320afcfc22378e",
+        "type": "mqtt out",
+        "z": "508bfdfd6e350e6a",
+        "name": "",
+        "topic": "",
+        "qos": "1",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "8e91f29796d3acfe",
+        "x": 910,
+        "y": 720,
+        "wires": []
+    },
+    {
+        "id": "41f6bdbc2860ba09",
+        "type": "mqtt out",
+        "z": "508bfdfd6e350e6a",
+        "name": "",
+        "topic": "ELEC520/users/update",
+        "qos": "1",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "8e91f29796d3acfe",
+        "x": 870,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "44b43098527839c1",
+        "type": "mysql",
+        "z": "508bfdfd6e350e6a",
+        "mydb": "4065fc3ce7257f26",
+        "name": "Elec520 DB",
+        "x": 830,
+        "y": 640,
+        "wires": [
+            []
         ]
     }
 ]
