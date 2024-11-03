@@ -11,8 +11,10 @@ String LED = "LED";
 #define CE 4
 #define Bus_Monitor_Pin 2
 
-//global variable for bus busy
+//global variable for bus busy state
 bool Bus_Busy = 0;
+//global variable for safe to transmit state
+bool Safe_To_Transmit = 0;
 // ISR for bus monitoring pin
 void Bus_Monitor_Pin_interrupt() {
   Bus_Busy = 1;
@@ -56,7 +58,7 @@ bool Collision_Avoidance() {
 
 //Tx protocol function
 bool Transmit_To_Bus() {
-  bool Safe_To_Transmit = Collision_Avoidance();
+  Safe_To_Transmit = Collision_Avoidance();
 
   if(Safe_To_Transmit){
     delay(random(1, 10));
@@ -96,9 +98,14 @@ void loop() {
     // Print a successful message
     Serial.println("Data successfully received.");
 
-    digitalWrite(CE, HIGH);
-    RS485Serial.write("LED");
-    digitalWrite(CE, LOW);
+    bool Clear_To_Send = Transmit_To_Bus();
+
+    If(Clear_To_Send){
+      digitalWrite(CE, HIGH);
+      RS485Serial.write("LED");
+      digitalWrite(CE, LOW);
+    }
+    //else what? what is the protocol for a failed transmission
   }
   // 
     // BUS = digitalRead(8);
