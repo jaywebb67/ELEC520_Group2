@@ -12,7 +12,7 @@ String LED = "LED";
 #define Bus_Monitor_Pin 2
 
 //global variable for bus busy state
-bool Bus_Busy = 0;
+volatile bool Bus_Busy = 0;
 //global variable for safe to transmit state
 bool Safe_To_Transmit = 0;
 // ISR for bus monitoring pin
@@ -56,6 +56,18 @@ bool Collision_Avoidance() {
   }
 }
 
+bool Collision_Avoidance(){
+  uint32_t x = 50;
+  for (uint32_t delay_time = 100; delay_time<10000; delay_time *= 2){
+    Bus_Busy = 0;
+    delay(1);
+    if(!Bus_Busy){
+      return 1;
+    }
+    delay(random(x, delay_time))
+    x *=2;
+  }
+}
 //Tx protocol function
 bool Transmit_To_Bus() {
   Safe_To_Transmit = Collision_Avoidance();
@@ -67,6 +79,13 @@ bool Transmit_To_Bus() {
   else return 0;
 }
 
+bool Clear_To_Send(){
+  if(Collision_Avoidance()){
+    delay(random(1, 10));
+    return 1;
+  }
+  else return 0;
+}
 //******END OF TX PROTOCOL******
 
 // Create a SoftwareSerial object to communicate with the MAX485
@@ -115,3 +134,9 @@ void loop() {
 
  
 }
+
+
+Serial.write(TX_Message, 5 + Fire_1.length); // Print the message byte array
+  Serial.println();
+  Print_Message(TX_Message, 6 + Fire_1.length); // Print the message in hex format
+  delay(2000); // Delay for 2 seconds

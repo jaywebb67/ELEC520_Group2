@@ -1,62 +1,34 @@
-// #define START_BYTE 0x02
-// #define END_BYTE 0x03
 #include "Communication_Protocol.h"
+
+//****CHANGE THE VALUE OF THIS VARIABLE TO EITHER NANO OR ESP****//
+uint8_t board = NANO;
+
 
 uint8_t Home_Address = 0x12;
 uint8_t Destination_Address = 0x00;
+uint8_t Sender_Address;
 
-unsigned char message[40]; // Increased size to accommodate additional bytes
+//message format: Start byte, Sender address byte, Destination address byte, Length byte, 34 message characters, Checksum byte, End byte.
+unsigned char TX_Message[40]; // sized for start byte,
+unsigned char RX_Message[40];
+unsigned char RX_Message_Payload[35];
 
-// struct TX_Payload {
-//   unsigned char length;
-//   char message[35];
-// };
-
+//Create a TX_Payload object for each message {number of characters, "message max 34 characters"}
 struct TX_Payload Fire_1 = {23, "Call button x activated"};
 
 void setup() {
+  //call Comms_Set_Up function this will set up the software serial object and initallise the pins for the correct board
+  Comms_Set_Up();
   Serial.begin(9600); // Initialize serial communication
 }
 
 void loop() {
-  Assemble_Message(&Fire_1, message); // Assemble message
-  Serial.write(message, 5 + Fire_1.length); // Print the message byte array
-  Serial.println();
-  Print_Message(message, 6 + Fire_1.length); // Print the message in hex format
-  delay(2000); // Delay for 2 seconds
+  //To transmit call Assemble_Message replace Fire_1 with your TX_Payload variable name leave the &, and TX_Message
+  Assemble_Message(&Fire_1, TX_Message); // Assemble message
+  //Then call Clear_To_Send this will check the bus, wait for it to be quiet, and do the collision avoidance
+  if(Clear_To_Send()){
+    RS485Serial.write(TX_Message, 6 + Fire_1.length); //replace Fire_1 with your TX_Payload variable name leave the .length 
+  }
+  
 }
 
-// void Print_Message(unsigned char* message, unsigned char length) {
-//   for (unsigned char i = 0; i < length; i++) {
-//     Serial.print("0x");
-//     if (message[i] < 0x10) Serial.print("0");
-//     Serial.print(message[i], HEX);
-//     Serial.print(" ");
-//   }
-//   Serial.println();
-// }
-
-
-
-// unsigned char Calculate_Checksum(struct TX_Payload* data) {
-//     unsigned char checksum = 0;
-//     for (unsigned char i = 0; i < data->length; i++) {
-//         checksum ^= data->message[i];
-//     }
-//     return checksum;
-// }
-
-// void Assemble_Message(struct TX_Payload* data, unsigned char* message) {
-//     message[0] = START_BYTE;             // Start byte
-//     message[1] = Home_Address;           // Sender Address byte
-//     message[2] = Destination_Address;    // Destination Address byte
-//     message[3] = data->length;           // Length byte
-    
-//     for (unsigned char i = 0; i < data->length; i++) {
-//         message[4 + i] = data->message[i]; // Payload
-//     }
-    
-    
-//     message[4 + data->length] = Calculate_Checksum(data); // Checksum
-//     message[5 + data->length] = END_BYTE;                // End byte
-// }
