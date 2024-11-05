@@ -57,7 +57,7 @@
         "id": "4065fc3ce7257f26",
         "type": "MySQLdatabase",
         "name": "ELEC520 Database",
-        "host": "192.168.1.226",
+        "host": "10.254.108.141",
         "port": "3306",
         "db": "ELEC520_database",
         "tz": "",
@@ -432,5 +432,24 @@
         "x": 830,
         "y": 800,
         "wires": []
+    },
+    {
+        "id": "d2c4f1f46a605fda",
+        "type": "mqtt in",
+        "z": "508bfdfd6e350e6a",
+        "name": "",
+        "topic": "ELEC520/users/add",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "8e91f29796d3acfe",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 900,
+        "wires": [
+            []
+        ]
     }
 ]

@@ -57,7 +57,7 @@
         "id": "4065fc3ce7257f26",
         "type": "MySQLdatabase",
         "name": "ELEC520 Database",
-        "host": "192.168.1.226",
+        "host": "192.168.151.118",
         "port": "3306",
         "db": "ELEC520_database",
         "tz": "",
@@ -181,7 +181,7 @@
         "type": "function",
         "z": "508bfdfd6e350e6a",
         "name": "function 8",
-        "func": "// Check if msg.payload contains an array of user data\nif (Array.isArray(msg.payload)) {\n    // Map through the results and format as 'user:password'\n    const formattedPayload = msg.payload.map(row => `${row.username}:${row.password}`).join('\\n');\n    \n    // Set the formatted string as the new payload\n    msg.payload = formattedPayload;\n}\n\n// Return the modified message\nreturn msg;\n",
+        "func": "// Check if msg.payload contains an array of user data\nif (Array.isArray(msg.payload)) {\n    // Create an array to store each individual message\n    const messages = [];\n\n    // Loop through the results and format each as 'user:password'\n    msg.payload.forEach(row => {\n        const formattedPayload = `${row.username}:${row.password}`;\n\n        // Push each formatted message as a new object in the array\n        messages.push({ payload: formattedPayload });\n    });\n\n    // Return the array of messages, one for each user credential\n    return [messages];\n}\n\n// If msg.payload is not an array, return it as is\nreturn msg;\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -432,5 +432,24 @@
         "x": 830,
         "y": 800,
         "wires": []
+    },
+    {
+        "id": "d2c4f1f46a605fda",
+        "type": "mqtt in",
+        "z": "508bfdfd6e350e6a",
+        "name": "",
+        "topic": "ELEC520/users/add",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "8e91f29796d3acfe",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 900,
+        "wires": [
+            []
+        ]
     }
 ]

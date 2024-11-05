@@ -555,6 +555,8 @@ module.exports = {
     /** Timeout in milliseconds for TCP server socket connections. Defaults to no timeout */
     //socketTimeout: 120000,
 
+    mysqlReconnectTime: 30000,
+
     /** Maximum number of messages to wait in queue while attempting to connect to TCP socket
      * defaults to 1000
      */

@@ -17,8 +17,8 @@
             },
             "sidebar": {
                 "order": [
-                    "help",
                     "info",
+                    "help",
                     "debug",
                     "config",
                     "context"
