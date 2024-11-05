@@ -1,11 +1,9 @@
-#include <LiquidCrystal_I2C.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include <freertos/semphr.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
-#include <Keypad.h>
-#include <cstring>  // Ensure this library is included for strcmp and memset
 #include <LittleFS.h>
 
 // ISRG Root X1 certificate (PEM format)
@@ -45,7 +43,7 @@ QueueHandle_t messageQueue;
 // Struct to store topic and message information
 struct MqttMessage {
   String topic = "";
-  String payload = "";  
+  String payload = "";
 };
 
 String payload = "";
@@ -56,43 +54,17 @@ const int mqttPort = 8883;                    // Port for secure MQTT (typically
 String clientId = "";
 // WiFi credentials
 // Update these with values suitable for your network.
-const char* ssid = "Jays_WiFi";  //BT-CJC2PH";//       // your network SSID (WiFi name)
-const char* password = "jaywebb1";//"NfECRbGtfV37Hd";   // your network password
+const char* ssid = "BT-CJC2PH";//"Jays_WiFi";       // your network SSID (WiFi name)
+const char* password = "NfECRbGtfV37Hd";//"jaywebb1";   // your network password
 
 //NetworkClientSecure client;
 NetworkClientSecure client;
 PubSubClient mqttClient(client);
 
-////keypad setup
-//keypad dimensions
-const byte rows = 4;
-const byte cols = 4;
-//keypad button values
- char keys[rows][cols] = {
-   {'1', '2', '3', 'A'},
-   {'4', '5', '6', 'B'},
-   {'7', '8', '9', 'C'},
-  {'*', '0', '#', 'D'}
-};
+SemaphoreHandle_t xMutex;
 
-//setting the arduino pins that are used for the columns and rows
-byte colPins[cols] = {26, 25, 33, 32};
-byte rowPins[rows] = {13, 12, 14, 27};
+bool alarmEnabled = false;
 
-//keypad initialisation
-Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, rows, cols);
-
-////LCD setup
-LiquidCrystal_I2C lcd(0x27, 16, 2);
-
-////password management
-const int passwordMaxLength = 6;
-String setPassword = "123456";  // Define setPassword as a String
-char currentInput[passwordMaxLength] = {0};
-
-char key;
-bool accessGranted = false;
-int idx = 0; 
 
 void setClock() {
   configTime(0, 0, "pool.ntp.org", "time.nist.gov","time.google.com");
@@ -151,23 +123,16 @@ void reconnect(int onSetUp) {
       Serial.println("connected");
       delay(100);
       // Subscribe to relevant topics based on setup phase
-      if (!LittleFS.exists("/deviceID.txt")){
-        Serial.println("Initialising deviceID");
-        mqttClient.subscribe("ELEC520/devices/update", 1);
-        delay(100);
-        mqttClient.publish("ELEC520/devices/view", "Gate");
-      }
       if (onSetUp) {
-        Serial.println("Initialising users");
-        mqttClient.subscribe("ELEC520/users/#", 1);
-        delay(100);
-        mqttClient.publish("ELEC520/users/view","Update Users from database");
-        
+        if (!LittleFS.exists("/deviceID.txt")){
+          Serial.println("Initialising deviceID");
+          mqttClient.subscribe("ELEC520/devices/update", 1);
+          delay(100);
+          mqttClient.publish("ELEC520/devices/view", "Gate");
+        }
       }
-      //vTaskDelay(pdMS_TO_TICKS(5000));  // Delay for 1 seconds (10000 ms)
       mqttClient.subscribe("ELEC520/#",1);
       
-
     } else {
       Serial.print("failed, rc=");
       Serial.print(mqttClient.state());
@@ -177,100 +142,9 @@ void reconnect(int onSetUp) {
   }
 }
 
-
-
-void getInput(){
-  key = keypad.getKey();
-  if (key){
-    currentInput[idx] = key;
-    idx++;
-  }
-}
-
-
-void keyPrompt(){
-  lcd.setCursor(0,0);
-  lcd.print("   Enter Key:   ");
-   // Calculate how many underscores to display
-  int remainingSpaces = passwordMaxLength - idx;
-
-  lcd.setCursor(4,1);
-  lcd.print("[");
-  lcd.setCursor(11,1);
-  lcd.print("]");
-  lcd.setCursor(5,1);
-  lcd.print(currentInput);
-    // Display remaining underscores
-  if(idx<6){
-    for (int i = 0; i < remainingSpaces; i++) {
-      lcd.print("_");
-    }
-  }
-}
-
-
-void checkPassword() {
-    lcd.setCursor(0, 0);
-    lcd.print("     Access     ");
-    lcd.setCursor(0, 1);
-
-    // Open the credentials file from LittleFS
-    File file = LittleFS.open("/userCredentials.txt", "r");
-    if (!file) {
-        Serial.println("Failed to open credentials file");
-        lcd.print("   Error       ");
-        delay(1000);
-        return;
-    }
-
-    bool matchFound = false;
-    while (file.available()) {
-        String line = file.readStringUntil('\n');
-        //Serial.print("Read line: ");
-        //Serial.println(line);  // Debug line to check format
-
-        int delimiterPos = line.indexOf(':');
-        if (delimiterPos == -1) {
-            continue; // Skip invalid lines
-        }
-        
-        // Extract username and password from the line
-        String username = line.substring(0, delimiterPos);
-        String password = line.substring(delimiterPos + 1);
-        password.trim(); // Remove newline and whitespace
-
-        // Check if entered password matches any stored password
-        if (strcmp(currentInput, password.c_str()) == 0) {
-            lcd.print("     Granted    ");
-            String message = username + " logged in";  // Customize message for MQTT
-            mqttClient.publish("ELEC520/test", message.c_str());  // Publish username
-            mqttClient.publish("ELEC520/alarm", "Alarm Disabled");  // Publish username
-            matchFound = true;
-            delay(1000);
-            break;
-        }
-    }
-
-    file.close();
-
-    if (!matchFound) {
-        lcd.print("     Denied     ");
-        mqttClient.publish("ELEC520/alarm", "Alarm Enabled");  // Publish username
-        delay(1000);
-    }
-
-    // Reset currentInput for the next attempt
-    memset(currentInput, 0, sizeof(currentInput));
-    idx = 0;
-}
-
-
-
 // Callback function that runs on Core 0
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   MqttMessage msg;
-  msg.topic = String(topic);
-  msg.payload = "";
 
   // Convert payload to String
   for (int i = 0; i < length; i++) {
@@ -296,30 +170,16 @@ void mqttHandler(void* pvParameters) {
       
       // Add additional processing code here if needed
       // Check if the message is for adding a new user credential
-      if (receivedMsg.topic == "ELEC520/users/add") {
-        Serial.println(receivedMsg.payload);
-        // Open the credentials file in append mode
-        File file = LittleFS.open("/userCredentials.txt", "a");
-        
+
+      if (receivedMsg.topic == "ELEC520/users/view") {
+        // Clear the file at the start when viewing/updating users from database
+        File file = LittleFS.open("/userCredentials.txt", "w");
         if (file) {
-          // Write the payload in 'user:password' format to the file
-          file.println(receivedMsg.payload); // Each entry goes on a new line
-          file.flush();  // Ensure data is written immediately
-          Serial.println("User credential added to file.");
-          file.close();
+            file.close();  // Close immediately to clear contents
+            Serial.println("User credentials file cleared.");
         } else {
-          Serial.println("Failed to open userCredential.txt for appending.");
+            Serial.println("Failed to open /userCredentials.txt for clearing.");
         }
-      }
-      else if (receivedMsg.topic == "ELEC520/users/view") {
-          // Clear the file at the start when viewing/updating users from database
-          File file = LittleFS.open("/userCredentials.txt", "w");
-          if (file) {
-              file.close();  // Close immediately to clear contents
-              Serial.println("User credentials file cleared.");
-          } else {
-              Serial.println("Failed to open /userCredentials.txt for clearing.");
-          }
       }
       else if (receivedMsg.topic == "ELEC520/devices/update") {
         Serial.println(receivedMsg.payload);
@@ -340,62 +200,24 @@ void mqttHandler(void* pvParameters) {
         delay(1000);
         esp_restart();
       }
-      else if (receivedMsg.topic == "ELEC520/users/update") {
-          Serial.println(receivedMsg.payload);
-          
-          // Split the payload into username and password
-          payload = String(receivedMsg.payload);
-          payload.trim();
-        // Debugging: Print each character's ASCII value to see any hidden characters
-        // Serial.println("Payload ASCII values:");
-        // for (int i = 0; i < payload.length(); i++) {
-        //     Serial.print(payload[i]);
-        //     Serial.print(" (");
-        //     Serial.print((int)payload[i]);
-        //     Serial.print(") ");
-        // }
-        // Serial.println();
-          int separatorIndex = payload.indexOf(':');  // Assuming a colon delimiter
-
-          if (separatorIndex != -1) {
-              String username = payload.substring(0, separatorIndex);
-              String password = payload.substring(separatorIndex + 1);
-
-              // Open the credentials file in append mode
-              File file = LittleFS.open("/userCredentials.txt", "a");
-              file.setBufferSize(1024);  // Set buffer size if needed
-
-              if (file) {
-                  // Write username, then colon, then password to the same line but separately
-                  file.print(username);   // Write the username
-                  file.print(":");        // Write the colon separator
-                  file.println(password); // Write the password and move to a new line
-                  
-                  file.flush();  // Ensure all data is written to storage
-
-                  // Close the file
-                  file.close();
-                  Serial.println("User credentials updated in file.");
-                
-              } else {
-                  Serial.println("Failed to open /userCredentials.txt for writing.");
-              }
-          } else {
-              Serial.println("Invalid payload format. Expected 'username:password'");
-          }
-      }
-
       else if (receivedMsg.topic == "ELEC520/test") {
         Serial.println(receivedMsg.payload);
       }
       else if (receivedMsg.topic == "ELEC520/alarm") {
         Serial.println(receivedMsg.payload);
+        String payload = receivedMsg.payload;
+        if (payload == "Alarm Disabled"){
+          alarmEnabled == false;
+        }
+        else{
+          alarmEnabled == true;
+        } 
       }
     }
   }
 }
 
-void setup() {
+void setup(){
   //Initialize serial and wait for port to open:
   Serial.begin(115200);
   delay(100);
@@ -433,13 +255,20 @@ void setup() {
   } 
   Serial.println("LittleFS mounted successfully");
 
-  lcd.init();
-  lcd.setBacklight(255);
-  lcd.backlight();
-
   // Create a queue to hold up to 10 messages
   messageQueue = xQueueCreate(10, sizeof(MqttMessage));
   
+  xMutex = xSemaphoreCreateMutex();
+
+  // Check if mutex was created successfully
+  if (xMutex == NULL) {
+      // Mutex creation failed
+      Serial.println("Mutex creation failed!");
+  } else {
+      // Mutex created successfully
+      Serial.println("Mutex created successfully!");
+  }
+
   // Create a task that runs on Core 0
   xTaskCreatePinnedToCore(
     mqttHandler,            // Function to run
@@ -458,13 +287,11 @@ void loop() {
   if (!mqttClient.connected()) {
     reconnect(0);
   }
-  if (idx < passwordMaxLength){
-      getInput();
-      keyPrompt();
-  } else {
-    checkPassword();
+  if (xSemaphoreTake(xMutex, portMAX_DELAY) == pdTRUE) {
+    if(alarmEnabled){
+      xSemaphoreGive(xMutex);  
+    }
   }
   mqttClient.loop();
+
 }
-
-

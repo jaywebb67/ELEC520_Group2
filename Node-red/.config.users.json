@@ -14,6 +14,15 @@
             },
             "tours": {
                 "welcome": "4.0.5"
+            },
+            "sidebar": {
+                "order": [
+                    "info",
+                    "help",
+                    "debug",
+                    "config",
+                    "context"
+                ]
             }
         },
         "menu-deploymenu-item-flow": true,
