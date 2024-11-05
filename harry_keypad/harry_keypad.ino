@@ -1,7 +1,7 @@
 ////importing libraries for interfacing with the LCD and the Keypad:
 #include <LiquidCrystal_I2C.h>
 #include <Keypad.h>
-
+#define speaker_pin 9
 ////keypad setup
 //keypad dimensions
 const byte rows = 4;
@@ -88,6 +88,7 @@ void checkPassword(){
     {
       lcd.print("     Denied     ");
       delay(2);
+      tone(SPEAKER_PIN,400,500)
       loop();
 
     }
