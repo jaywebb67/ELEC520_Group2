@@ -6,12 +6,13 @@ uint8_t board = NANO;
 
 uint8_t Home_Address = 0x12;
 uint8_t Destination_Address = 0x00;
-uint8_t Sender_Address;
+uint8_t Node_Type;
+// uint8_t Sender_Address;
 
-//message format: Start byte, Sender address byte, Destination address byte, Length byte, 34 message characters, Checksum byte, End byte.
-unsigned char TX_Message[40]; // sized for start byte,
-unsigned char RX_Message[40];
-unsigned char RX_Message_Payload[35];
+// //message format: Start byte, Sender address byte, Destination address byte, Length byte, 34 message characters, Checksum byte, End byte.
+// unsigned char TX_Message[40]; // sized for start byte,
+// unsigned char RX_Message[40];
+// unsigned char RX_Message_Payload[35];
 
 //Create a TX_Payload object for each message {number of characters, "message max 34 characters"}
 struct TX_Payload Fire_1 = {23, "Call button x activated"};
