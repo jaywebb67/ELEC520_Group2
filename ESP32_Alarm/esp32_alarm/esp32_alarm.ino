@@ -1,10 +1,12 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include <freertos/semphr.h>
+//#include <freertos/semphr.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <LittleFS.h>
+
+#define speakerPin 4
 
 // ISRG Root X1 certificate (PEM format)
 const char* isrg_root_x1_cert = R"literal(-----BEGIN CERTIFICATE-----
@@ -61,10 +63,11 @@ const char* password = "NfECRbGtfV37Hd";//"jaywebb1";   // your network password
 NetworkClientSecure client;
 PubSubClient mqttClient(client);
 
-SemaphoreHandle_t xMutex;
+//SemaphoreHandle_t xMutex;
+
 
 bool alarmEnabled = false;
-
+bool restartFlag = 0;
 
 void setClock() {
   configTime(0, 0, "pool.ntp.org", "time.nist.gov","time.google.com");
@@ -107,7 +110,7 @@ void reconnect(int onSetUp) {
     }
   } else {
     // If `deviceID.txt` does not exist, generate a random client ID
-    clientId = "Gate" + String(random(0xffff), HEX);
+    clientId = "Alarm" + String(random(0xffff), HEX);
     Serial.println("No deviceID.txt found. Generated random client ID: " + clientId);
   }
   if(mqttClient.connected()){
@@ -119,16 +122,16 @@ void reconnect(int onSetUp) {
   while (!mqttClient.connected()) {
     Serial.print("Attempting MQTT connection with clientId: ");
     Serial.println(clientId);
-    if (mqttClient.connect(clientId.c_str(), "esp32", "sub123")) {
+    if (mqttClient.connect(clientId.c_str(), "alarm", "alarmpassword")) {
       Serial.println("connected");
-      delay(100);
+      //delay(100);
       // Subscribe to relevant topics based on setup phase
       if (onSetUp) {
         if (!LittleFS.exists("/deviceID.txt")){
           Serial.println("Initialising deviceID");
           mqttClient.subscribe("ELEC520/devices/update", 1);
-          delay(100);
-          mqttClient.publish("ELEC520/devices/view", "Gate");
+          //delay(100);
+          mqttClient.publish("ELEC520/devices/view", "Alarm");
         }
       }
       mqttClient.subscribe("ELEC520/#",1);
@@ -137,25 +140,27 @@ void reconnect(int onSetUp) {
       Serial.print("failed, rc=");
       Serial.print(mqttClient.state());
       Serial.println(" try again in 5 seconds");
-      delay(5000);
+      delay(1000);
     }
   }
 }
 
 // Callback function that runs on Core 0
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
-  MqttMessage msg;
-
-  // Convert payload to String
-  for (int i = 0; i < length; i++) {
-    msg.payload += (char)payload[i];
-  }
-
-  // Send the message to the queue
-  if (xQueueSend(messageQueue, &msg, portMAX_DELAY) != pdTRUE) {
-    Serial.println("Failed to send message to queue");
-  }
+    MqttMessage msg;
+    msg.topic = String(topic); // Ensure the topic is correctly stored
+    for (int i = 0; i < length; i++) {
+        msg.payload += (char)payload[i];
+    }
+    // Serial.print("Received topic: ");
+    // Serial.println(msg.topic);
+    // Serial.print("Received payload: ");
+    // Serial.println(msg.payload);
+    if (xQueueSend(messageQueue, &msg, portMAX_DELAY) != pdTRUE) {
+        Serial.println("Failed to send message to queue");
+    }
 }
+
 
 // Task function to process messages on Core 1
 void mqttHandler(void* pvParameters) {
@@ -164,10 +169,7 @@ void mqttHandler(void* pvParameters) {
   while (true) {
     // Check if there’s a message in the queue
     if (xQueueReceive(messageQueue, &receivedMsg, portMAX_DELAY) == pdTRUE) {
-      // Serial.print("Topic: ");
-      // Serial.print(receivedMsg.topic);
-      // Serial.print(", Message: ");  
-      
+
       // Add additional processing code here if needed
       // Check if the message is for adding a new user credential
 
@@ -197,20 +199,23 @@ void mqttHandler(void* pvParameters) {
           Serial.println("Failed to open and write 'deviceID.txt'.");
         }
         file.close();
-        delay(1000);
-        esp_restart();
+        restartFlag = 1;
       }
       else if (receivedMsg.topic == "ELEC520/test") {
         Serial.println(receivedMsg.payload);
       }
       else if (receivedMsg.topic == "ELEC520/alarm") {
         Serial.println(receivedMsg.payload);
-        String payload = receivedMsg.payload;
-        if (payload == "Alarm Disabled"){
-          alarmEnabled == false;
+        receivedMsg.payload.trim();
+        if (receivedMsg.payload == "Alarm Disabled"){
+          //Serial.println("Alarm disarmed");
+          alarmEnabled = false;
         }
         else{
-          alarmEnabled == true;
+          //Serial.println("Alarm disarmed");
+          alarmEnabled = true;
+          // Serial.print("alarmEnabled is set to: ");
+          // Serial.println(alarmEnabled);
         } 
       }
     }
@@ -258,16 +263,16 @@ void setup(){
   // Create a queue to hold up to 10 messages
   messageQueue = xQueueCreate(10, sizeof(MqttMessage));
   
-  xMutex = xSemaphoreCreateMutex();
+  // xMutex = xSemaphoreCreateMutex();
 
-  // Check if mutex was created successfully
-  if (xMutex == NULL) {
-      // Mutex creation failed
-      Serial.println("Mutex creation failed!");
-  } else {
-      // Mutex created successfully
-      Serial.println("Mutex created successfully!");
-  }
+  // // Check if mutex was created successfully
+  // if (xMutex == NULL) {
+  //     // Mutex creation failed
+  //     Serial.println("Mutex creation failed!");
+  // } else {
+  //     // Mutex created successfully
+  //     Serial.println("Mutex created successfully!");
+  // }
 
   // Create a task that runs on Core 0
   xTaskCreatePinnedToCore(
@@ -284,14 +289,23 @@ void setup(){
 
 void loop() {
   // your code to interact with the server here
+  if (restartFlag){
+    delay(1000);
+    esp_restart();
+  }
+
   if (!mqttClient.connected()) {
     reconnect(0);
   }
-  if (xSemaphoreTake(xMutex, portMAX_DELAY) == pdTRUE) {
-    if(alarmEnabled){
-      xSemaphoreGive(xMutex);  
-    }
+  if(alarmEnabled == true){
+    tone(speakerPin,400,500);
+    delay(1000);
   }
+  // if (xSemaphoreTake(xMutex, portMAX_DELAY) == pdTRUE) {
+  //   if(alarmEnabled){
+  //     xSemaphoreGive(xMutex);  
+  //   }
+  // }
   mqttClient.loop();
 
 }

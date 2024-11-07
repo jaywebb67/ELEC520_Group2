@@ -56,8 +56,8 @@ const int mqttPort = 8883;                    // Port for secure MQTT (typically
 String clientId = "";
 // WiFi credentials
 // Update these with values suitable for your network.
-const char* ssid = "Jays_WiFi";  //BT-CJC2PH";//       // your network SSID (WiFi name)
-const char* password = "jaywebb1";//"NfECRbGtfV37Hd";   // your network password
+const char* ssid = "BT-CJC2PH";//"Jays_WiFi";  //       // your network SSID (WiFi name)
+const char* password = "NfECRbGtfV37Hd";   // "jaywebb1"; //your network password
 
 //NetworkClientSecure client;
 NetworkClientSecure client;
@@ -92,6 +92,7 @@ char currentInput[passwordMaxLength] = {0};
 
 char key;
 bool accessGranted = false;
+bool restartFlag = false;
 int idx = 0; 
 
 void setClock() {
@@ -149,18 +150,18 @@ void reconnect(int onSetUp) {
     Serial.println(clientId);
     if (mqttClient.connect(clientId.c_str(), "esp32", "sub123")) {
       Serial.println("connected");
-      delay(100);
+      //delay(100);
       // Subscribe to relevant topics based on setup phase
       if (!LittleFS.exists("/deviceID.txt")){
         Serial.println("Initialising deviceID");
         mqttClient.subscribe("ELEC520/devices/update", 1);
-        delay(100);
+        //delay(100);
         mqttClient.publish("ELEC520/devices/view", "Gate");
       }
       if (onSetUp) {
         Serial.println("Initialising users");
         mqttClient.subscribe("ELEC520/users/#", 1);
-        delay(100);
+        //delay(100);
         mqttClient.publish("ELEC520/users/view","Update Users from database");
         
       }
@@ -336,9 +337,8 @@ void mqttHandler(void* pvParameters) {
         } else {
           Serial.println("Failed to open and write 'deviceID.txt'.");
         }
-        file.close();
-        delay(1000);
-        esp_restart();
+        //file.close();
+        restartFlag = 1;
       }
       else if (receivedMsg.topic == "ELEC520/users/update") {
           Serial.println(receivedMsg.payload);
@@ -391,6 +391,8 @@ void mqttHandler(void* pvParameters) {
       else if (receivedMsg.topic == "ELEC520/alarm") {
         Serial.println(receivedMsg.payload);
       }
+      receivedMsg.topic = "";
+      receivedMsg.payload = "";
     }
   }
 }
@@ -455,6 +457,11 @@ void setup() {
 
 void loop() {
   // your code to interact with the server here
+  if (restartFlag){
+    delay(1000);
+    esp_restart();
+  }
+
   if (!mqttClient.connected()) {
     reconnect(0);
   }

@@ -57,7 +57,7 @@
         "id": "4065fc3ce7257f26",
         "type": "MySQLdatabase",
         "name": "ELEC520 Database",
-        "host": "10.254.108.141",
+        "host": "192.168.1.226",
         "port": "3306",
         "db": "ELEC520_database",
         "tz": "",
@@ -438,7 +438,7 @@
         "type": "mqtt in",
         "z": "508bfdfd6e350e6a",
         "name": "",
-        "topic": "ELEC520/users/add",
+        "topic": "ELEC520/#",
         "qos": "1",
         "datatype": "auto-detect",
         "broker": "8e91f29796d3acfe",
@@ -446,10 +446,46 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 150,
+        "x": 130,
         "y": 900,
         "wires": [
             []
         ]
+    },
+    {
+        "id": "b546d31715e99b4d",
+        "type": "function",
+        "z": "508bfdfd6e350e6a",
+        "name": "function 13",
+        "func": "const topic = msg.topic;\nconst payload = msg.payload; \n\nmsg.topic = topic;\nmsg.payload = payload;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 900,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "163f6993a64a2e45",
+        "type": "mqtt out",
+        "z": "508bfdfd6e350e6a",
+        "name": "",
+        "topic": "",
+        "qos": "1",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "8e91f29796d3acfe",
+        "x": 510,
+        "y": 900,
+        "wires": []
     }
 ]
