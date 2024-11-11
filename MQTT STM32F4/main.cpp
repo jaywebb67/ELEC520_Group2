@@ -64,15 +64,7 @@ int main()
         //Set the TCP socket port
         a.set_port(SOCKET_PORT);
 
-        //Option 1. Look up IP address of remote machine on the Internet
-        //net.gethostbyname("ifconfig.io", &a);
-        //net.gethostbyname("mozziemanager.local", &a);
-        //printf("Server IP address: %s\n", a.get_ip_address() ? a.get_ip_address() : "None");
-
-        //Option 2. Manually set the address (In a Windows terminal, type ipconfig /all and look for the IPV4 Address for the network interface you are using)
-        //a.set_ip_address(IPV4_BROKER_ADDRESS);
-
-        //Option 3. Automatically use the gateway address (the host PC if sharing a connection)
+        //Automatically use the gateway address (the host PC if sharing a connection)
         a.set_ip_address(gw.get_ip_address());
 
         //Connect to remote server
@@ -81,12 +73,11 @@ int main()
 
         //Now to publish
         cout << "Connect to server: " << a.get_ip_address() << endl;
-        lcdDisp.locate(1, 0);
-        lcdDisp.printf("B:%s", a.get_ip_address());
+        
         
         MQTTPacket_connectData pcd = MQTTPacket_connectData_initializer;
         pcd.MQTTVersion = 3;
-        pcd.clientID.cstring = (char*)"nucleo";
+        pcd.clientID.cstring = (char*)"terminal";
         pcd.username.cstring = (char*)"subscriber";
         pcd.password.cstring = (char*)"sub123";
         client.connect(pcd);
@@ -97,7 +88,7 @@ int main()
         cout << "Publish payload \"" << strPayload << "\" with topic f429/potValue" << endl;
 
         MQTT::Message msg;
-        msg.qos = MQTT::QoS::QOS0;
+        msg.qos = MQTT::QoS::QOS1;
         msg.payload = (void*)strPayload;
         msg.payloadlen = strlen((char*)msg.payload);
         msg.dup = false;

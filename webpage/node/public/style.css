@@ -1,0 +1,326 @@
+/* General Styling */
+html {
+  font-family: Arial, Helvetica, sans-serif;
+  display: inline-block;
+  text-align: center;
+}
+body {
+  margin: 0;
+}
+h1 {
+  font-size: 1.8rem;
+  color: white;
+  margin: 0;
+  text-align: center;
+  flex-grow: 1;
+}
+p {
+  font-size: 1.4rem;
+}
+
+.row {
+  margin-left:-5px;
+  margin-right:-5px;
+}
+  
+.column {
+  float: left;
+  width: 50%;
+  padding: 5px;
+}
+
+/* Clearfix (clear floats) */
+.row::after {
+  content: "";
+  clear: both;
+  display: table;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+}
+
+th, td {
+  text-align: center;
+  padding: 12px;
+  border: 1px solid #ddd; /* Add border to cells */
+}
+
+th {
+  background-color: #f2f2f2; /* Light background for header */
+}
+
+tr:nth-child(even) {
+  background-color: #f9f9f9; /* Zebra striping for rows */
+}
+
+tr:hover {
+  background-color: #f1f1f1; /* Highlight row on hover */
+}
+
+
+/* Top Navigation Bar */
+.topnav {
+  overflow: hidden;
+  background-color: #142250;
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  position: relative;
+  justify-content: center;
+}
+.menu-button {
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: white;
+  background: none;
+  border: none;
+  
+  position: absolute;
+  left: 10px;
+  z-index: 2; /* Ensures menu button is on top */
+}
+.menu-button:hover{
+  background-color: #444;
+}
+
+/* Sidebar Menu */
+.sidebar {
+  height: 100%;
+  width: 0;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  background-color: #142250;
+  overflow-x: hidden;
+  transition: 0.5s;
+  padding-top: 60px;
+}
+.sidebar a {
+  padding: 8px 8px 8px 32px;
+  text-decoration: none;
+  font-size: 25px;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  color: #818181;
+  display: block;
+  transition: 0.3s;
+}
+.sidebar a:hover {
+  color: #f1f1f1;
+  background-color: #444;
+}
+
+#overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: 'white'; /* Adjust opacity as needed */
+  z-index: -1; /* Set below content by default */
+  transition: background-color 0.5s ease;
+  pointer-events: none; /* Prevent interaction with overlay */
+}
+
+#overlayPopUp {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: none; /* Initially hidden */
+  z-index: 999;
+}
+
+/* Show overlay only when sidebar is open */
+.sidebar-open #overlay {
+  z-index: 1; /* Bring it above other elements when active */
+  pointer-events: none;
+  background-color: rgba(0,0,0,0.4);
+}
+
+
+/* Content */
+.content {
+  padding: 1%;
+}
+
+.card-grid {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-gap: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Default layout */
+}
+
+.card {
+  display: flexbox;
+  background-color: white;
+  box-shadow: 2px 2px 12px 1px rgba(140, 140, 140, .5);
+}
+
+.card-table {
+  display: flexbox;
+  background-color: none;
+  border: 2px;
+  
+}
+
+.card-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centers form contents horizontally */
+  background-color: white;
+  box-shadow: 2px 2px 12px 1px rgba(140, 140, 140, .5);
+}
+
+.card-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #034078;
+}
+.chart-container {
+  padding-right: 5%;
+  padding-left: 5%;
+}
+
+/* Add padding around the 'adminUsers' table */
+.table-container {
+  padding: 20px;
+  box-sizing: border-box; /* Ensures padding doesn’t add to overall width */
+}
+
+#adminUsers {
+  width: 100%; /* Keeps table width within container */
+  border-collapse: collapse;
+  margin: 0; /* Removes default margin */
+}
+
+form {
+  width: 100%;
+  max-width: 300px; /* Limits form width */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Aligns form elements at the center */
+  border: 0px;
+  padding:0px;
+}
+
+
+.input-container {
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: 16px;
+}
+
+
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  max-width: 300px;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #333;
+  margin-bottom: 10px;
+  box-sizing: border-box; /* Ensures padding doesn't exceed form width */
+}
+
+.submit {
+  width: 100%;
+  max-width: 300px;
+  background-color: #333;
+  color: white;
+  padding: 10px;
+  font-size: 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 16px;
+  box-sizing: border-box; /* Ensures padding doesn't exceed form width */
+}
+
+.submit:hover {
+  background-color: #444;
+}
+
+select {
+  width: 100%;
+  max-width: 300px;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #333;
+  margin-bottom: 10px;
+  box-sizing: border-box; /* Ensures padding doesn't exceed form width */
+}
+
+#userPassword {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.password-text {
+  margin-right: 8px;
+  -webkit-text-security: disc; /* Hides the password by default */
+}
+
+.show-password-checkbox {
+  margin-left: auto;
+  cursor: pointer;
+}
+
+.popup-form {
+  display: none; /* Initially hidden */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px;
+  padding: 20px;
+  background-color: white;
+  box-shadow: 2px 2px 12px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.popup-form h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.popup-form .input-container {
+  margin-bottom: 16px;
+}
+
+.popup-form button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  background-color: #333;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.popup-form button:hover {
+  background-color: #444;
+}
+
+/* Responsive layout - makes the two columns stack on top of each other instead of next to each other on screens that are smaller than 600 px */
+@media screen and (max-width: 600px) {
+  .card-grid {
+    grid-template-columns: 1fr; /* Stack cards on top of each other */
+  }
+}
+

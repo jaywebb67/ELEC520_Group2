@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  node:
+    build:
+      context: ./node
+      dockerfile: Dockerfile.dockerfile
+    volumes:
+      - ./node:/usr/src/app
+      - /usr/src/app/node_modules # Prevents overwriting node_modules
+    ports:
+      - "3000:3000"
+volumes:
+  node_modules: # Named volume to store node_modules

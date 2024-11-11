@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>ESP IOT DASHBOARD</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" type="image/png" href="favicon.png">
+        <link rel="stylesheet" type="text/css" href="style.css">
+        <script src="https://code.highcharts.com/highcharts.js"></script>
+        <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+        <script>
+            // Check if the user is logged in
+            if (sessionStorage.getItem('isLoggedIn') !== 'true') {
+                // Redirect to the login page
+                window.location.href = 'login.html'; // Change to your actual login page URL
+            }
+        </script>
+    </head>
+    <body data-permissions="<%= permissions %>">
+
+        <header>
+            <div class="topnav">
+            <button id="menuButton" class="menu-button" onclick="toggleNav()">☰</button>
+            <h1 id ="title" class="text">ELEC520 Group 2 Security System</h1>
+            </div>
+        </header>
+        <main id="main">
+            
+            <div id="overlay"></div>
+            <section id="dashboard">
+                <div class="content">
+                    <div class="card-grid">
+                        <div class="card">
+                            <p class="card-title">Temperature Chart</p>
+                            <div id="chart-temperature" class="chart-container"></div>
+                        </div>
+                        <div class="card">
+                            <p class="card-title">IMU Chart</p>
+                            <div id="chart-IMU" class="chart-container"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="content">
+                    <div class="card-grid">
+                        <div class="card-table">    
+                            <p class="card-title">User Access Log</p>
+                            <table id="useraccess">
+                                <thead>
+                                    <tr>
+                                        <th>User ID</th>
+                                        <th>Access Time</th>
+                                        <th>Gate ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (userAccessData.length) { %>
+                                        <% userAccessData.forEach(entry => { %>
+                                            <tr>
+                                                <td><%= entry.user %></td>
+                                                <td><%= entry.timeAccessed %></td>
+                                                <td><%= entry.gateID %></td>
+                                            </tr>
+                                        <% }) %>
+                                    <% } else { %>
+                                        <tr><td colspan="3">No user access data available</td></tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+            
+                        <div class="card-table">
+                            <p class="card-title">Add User</p>
+                            <table id="devicePing">
+                                <thead>
+                                    <tr>
+                                        <th>Device ID</th>
+                                        <th>Last Ping</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (deviceStatusData.length) { %>
+                                        <% deviceStatusData.forEach(entry => { %>
+                                            <tr>
+                                                <td><%= entry.deviceID %></td>
+                                                <td><%= entry.lastPing %></td>
+                                                <td>
+                                                    <img src="<%= entry.status === 'online' ? 'online.png' : 'offline.png' %>" alt="Status" />
+                                                </td>
+                                            </tr>
+                                        <% }) %>
+                                    <% } else { %>
+                                        <tr><td colspan="3">No device status data available</td></tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+
+            <section id="adminSection">
+                <div class="content">
+                    <div class="card-grid">
+                        <div class="card">
+                            <p class="card-title">System Users</p>
+                            <div class="table-container">
+                                <table id="adminUsers">
+                                    <thead>
+                                        <tr>
+                                            <th>User</th>
+                                            <th>Password</th>
+                                            <th>Permissions</th>
+                                            <th>Edit user</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% if (userData.length) { %>
+                                            <% userData.forEach(entry => { %>
+                                                <tr>
+                                                    <td><%= entry.username %></td>
+                                                    <td id="userPassword">
+                                                        <span class="password-text" style="-webkit-text-security: disc;"><%= entry.password %></span>
+                                                        <input type="checkbox" onclick="showPassword(this.previousElementSibling)" class="show-password-checkbox">
+                                                    </td>                                                    
+                                                    <td><%= entry.permissions %></td>
+                                                    <td>
+                                                        <a href="#" onclick="openEditPopup('<%= entry.username %>', '<%= entry.password %>', '<%= entry.permissions %>')">Edit</a>
+                                                    </td>
+                                                </tr>
+                                            <% }) %>
+                                        <% } else { %>
+                                            <tr><td colspan="4">No user access data available</td></tr>
+                                        <% } %>
+                                    </tbody>
+                                    
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card-form">
+                            <p class="card-title">Add User</p>
+                            <form id="addUser" method="POST">
+                                <div class="input-container">
+                                    <label for="uname">Username</label>
+                                    <input type="text" name="username" placeholder="Enter Username" id="uname" required>
+                                </div>
+                          
+                                <div class="input-container">
+                                    <label for="psw">Password</label>
+                                    <input type="password" name="password" placeholder="Enter Password" id="psw" required>
+                                </div>
+
+                                <div class="input-container">
+                                    <label for="permissions">Permissions</label>
+                                    <select id="permissions" name="permissions" required>
+                                        <option value="default">Default</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+                          
+                                <button type="submit" class="submit">Submit</button>
+                                  <!-- Error message container -->
+                                <div id="errorMessage">
+                                  <p id="errorText"></p>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div id="overlayPopUp" onclick="closeEditPopup()"></div>
+                <div id="editUserPopup" class="popup-form">
+                    <form id="editUserForm" method="POST">
+                        <h2>Edit User</h2>
+                        
+                        <div class="input-container">
+                            <label for="editUsername">Username</label>
+                            <input type="text" id="editUsername" name="username" readonly>
+                        </div>
+                        
+                        <div class="input-container">
+                            <label for="editPassword">Password</label>
+                            <input type="password" id="editPassword" name="password" required>
+                        </div>
+                        
+                        <div class="input-container">
+                            <label for="editPermissions">Permissions</label>
+                            <select id="editPermissions" name="permissions">
+                                <option value="default">Default</option>
+                                <option value="permissions">Permissions</option>
+                            </select>
+                        </div>
+                        
+                        <button type="button" onclick="saveChanges()">Save Changes</button>
+                        <button type="button" onclick="closeEditPopup()">Cancel</button>
+                    </form>
+                </div>
+                
+            </section>
+
+        
+        </main>
+
+        <!-- Sidebar Menu -->
+        <div id="mySidebar" class="sidebar">
+            <a href="#" id="dashboard-link" onclick="showDashboard()">Dashboard</a>
+            <a href="#" id="admin-link" onclick="showAdmin()">Admin</a>
+            <a href="#" id="logoutButton">Log Out</a>
+        </div>
+
+        <script src="script.js"></script>
+        <script>
+            console.log("User Permissions:", document.body.getAttribute("data-permissions"));
+        </script>
+    </body>
+</html>

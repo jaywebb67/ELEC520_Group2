@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* Reset styling */
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: Arial, sans-serif;
+    color: #333;
+    display: flex;
+    height: 100vh;
+  }
+
+  /* Left side design */
+  .left-section {
+    background-color: #333;
+    background-image: repeating-linear-gradient(
+      45deg,
+      #0A1128,
+      #0A1128 40px,
+      #142250 40px,
+      #142250 80px
+    );
+    width: 55%;
+    height: 100%;
+  }
+
+  /* Right side login form */
+  .right-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 45%;
+    background-color: #fff;
+  }
+
+  .logo-container {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .logo-container img {
+    display: flex;
+  }
+
+  h1 {
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 10px;
+  }
+
+  h2 {
+    font-size: 20px;
+    color: #555;
+    margin-bottom: 20px;
+  }
+
+  form{
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-left: 50%;
+    border: 0px;
+    padding:0px;
+  }
+
+  .input-container {
+    width: 100%;
+    max-width: 360px;
+    margin-bottom: 16px;
+  }
+
+  input[type="text"],
+  input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background-color: #fff;
+    color: #333;
+    margin-bottom: 10px;
+  }
+
+  .remember-forgot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #333;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .remember-forgot a {
+    color: #0066cc;
+    text-decoration: none;
+  }
+
+  .remember-forgot a:hover {
+    text-decoration: underline;
+  }
+
+  button {
+    width: 100%;
+    max-width: 360px;
+    background-color: #333;
+    color: white;
+    padding: 10px;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 16px;
+  }
+
+  button:hover {
+    background-color: #444;
+  }
+
+  .signup-link {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 14px;
+    color: #333;
+  }
+
+  .signup-link a {
+    color: #0066cc;
+    text-decoration: none;
+  }
+
+  .signup-link a:hover {
+    text-decoration: underline;
+  }
+
+  .errorText {
+    color: #d73a49;
+    font-size: 14px;
+    margin-top: 10px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+  <div class="left-section"></div>
+
+  <div class="right-section">
+    <div class="logo-container">
+      <img src="university_of_plymouth_logo.png" alt="University of Plymouth Logo">
+    </div>
+
+    <h1>ELEC520 Security System</h1>
+    <h2>Welcome back!</h2>
+
+    <!-- The form submits to login.php for authentication -->
+    <form id="loginForm" action="/login" method="POST">
+      <div class="input-container">
+        <input type="text" name="username" placeholder="Enter Username" id="uname" required>
+      </div>
+
+      <div class="input-container">
+        <input type="password" name="password" placeholder="Enter Password" id="psw" required>
+      </div>
+
+      <div class="remember-forgot">
+        <label>
+          <input type="checkbox" checked="checked" name="remember"> Remember me
+        </label>
+        <a href="#">Reset password</a>
+      </div>
+
+      <button type="submit">Sign in</button>
+        <!-- Error message container -->
+      <div id="errorMessage">
+        <p id="errorText"></p>
+      </div>
+    </form>
+
+  </div>
+  <script>
+      // Check if there is an error in the query parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const errorMessage = urlParams.get('error');
+
+      if (errorMessage) {
+        document.getElementById("errorText").innerText = errorMessage;
+        document.getElementById("errorText").style.color = "#d73a49";
+        document.getElementById("errorMessage").style.display = "block";
+        document.getElementById("errorText").style.alignItems = "center";
+      }
+  </script>
+
+</body>
+</html>
