@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   node:
     build:
@@ -8,7 +6,9 @@ services:
     volumes:
       - ./node:/usr/src/app
       - /usr/src/app/node_modules # Prevents overwriting node_modules
+      - ./serviceAccountKey.json:/usr/src/app/serviceAccountKey.json
     ports:
       - "3000:3000"
 volumes:
   node_modules: # Named volume to store node_modules
+

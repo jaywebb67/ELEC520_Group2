@@ -184,13 +184,11 @@
         <p id="errorText"></p>
       </div>
     </form>
-
   </div>
   <script>
       // Check if there is an error in the query parameters
       const urlParams = new URLSearchParams(window.location.search);
       const errorMessage = urlParams.get('error');
-
       if (errorMessage) {
         document.getElementById("errorText").innerText = errorMessage;
         document.getElementById("errorText").style.color = "#d73a49";

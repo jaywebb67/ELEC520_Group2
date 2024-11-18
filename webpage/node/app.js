@@ -1,14 +1,25 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
-
-// Import Firebase SDK
-const { initializeApp } = require("firebase/app");
-const { getDatabase, ref, get, child } = require("firebase/database");
+const session = require('express-session');
+require('dotenv').config();
 
 const app = express();
 const PORT = 3000;
 
+
+
+// Initialize Firebase Admin SDK
+const admin = require('firebase-admin');
+const serviceAccount = require('./serviceAccountKey.json'); // Update the path as needed
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: "https://elec520-58761-default-rtdb.europe-west1.firebasedatabase.app"
+});
+
+// Import Firebase SDK
+const { initializeApp } = require("firebase/app");
+const { getDatabase, ref, get, child } = require("firebase/database");
 // Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBaEAAnRaCB5Q6HrW_rg3PWlU_gjdxw5ZY",
@@ -20,42 +31,52 @@ const firebaseConfig = {
   appId: "1:31636359275:web:2627996b0df78262c7892e",
   measurementId: "G-6FNJDP8F5Y"
 };
-
 // Initialize Firebase and database
 const firebaseApp = initializeApp(firebaseConfig);
 const database = getDatabase(firebaseApp);
 
-// Set EJS as the view engine
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'public'));
+require('./mqttclient'); // This will trigger the MQTT client logic
+
+// Middleware to parse JSON and URL-encoded data
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// Route setup
+const updateUserRoute = require('./routes/updateUser');
+const { router: getTableDataRoute } = require('./routes/getTableData');
+const addUserRoute = require('./routes/addUser'); // Adjust path as needed
+const mqttClient = require('./mqttclient'); // Import the MQTT client
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/api', updateUserRoute);
+app.use('/api', getTableDataRoute); // Register the route for get-table-data
+app.use('/api', addUserRoute);
 
-// Serve login page (for both root and /login)
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
-
-
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
-
-// Import express-session to handle user sessions
-const session = require('express-session');
-require('dotenv').config(); // Make sure to load the environment variables
-console.log("Session Secret:", process.env.SESSION_SECRET);
-
+// Set EJS as the view engine
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'public'));
 
 app.use(session({
   secret: process.env.SESSION_SECRET, // replace with your secret key
   resave: false,
   saveUninitialized: true
 }));
+
+// Serve login page (for both root and /login)
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+
+app.get('/admin', (req, res) => {
+  return res.redirect('/indexTutorial.html');
+});
 
 // Handle login form submission
 app.post('/login', async (req, res) => {
@@ -104,7 +125,6 @@ app.post('/logout', (req, res) => {
 });
 
 
-
 // Render main dashboard
 app.get('/indexTutorial.html', async (req, res) => {
   // Check that session data is correct
@@ -141,10 +161,9 @@ app.get('/indexTutorial.html', async (req, res) => {
   }
 });
 
-
-
-
-
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Server is working fine' });
+});
 
 // Start server
 app.listen(PORT, () => {

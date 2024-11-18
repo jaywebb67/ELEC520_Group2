@@ -5,7 +5,7 @@ html {
   text-align: center;
 }
 body {
-  margin: 0;
+  padding-top: 60px; /* Adjust based on the height of your navbar */
 }
 h1 {
   font-size: 1.8rem;
@@ -63,14 +63,19 @@ tr:hover {
 
 /* Top Navigation Bar */
 .topnav {
+  position: fixed; /* Fixes the navbar to the top */
+  top: 0;          /* Position at the very top */
+  left: 0;         /* Align to the left of the page */
+  width: 100%;     /* Make it span the full width */
   overflow: hidden;
   background-color: #142250;
   display: flex;
   align-items: center;
-  padding: 1rem;
-  position: relative;
+  padding: 10px 20px;
   justify-content: center;
+  z-index: 1000;    /* Make sure it stays on top of other elements */
 }
+
 .menu-button {
   font-size: 1.5rem;
   cursor: pointer;
@@ -173,27 +178,43 @@ tr:hover {
 }
 
 .card-form {
-  display: flex;
-  flex-direction: column;
-  align-items: center; /* Centers form contents horizontally */
-  background-color: white;
-  box-shadow: 2px 2px 12px 1px rgba(140, 140, 140, .5);
+    display: flex;
+    flex-direction: column; /* Keep children stacked */
+    align-items: center; /* Center content horizontally */
+    min-height: 75vh; /* Ensure full viewport height */
+    background-color: white; /* Optional background color */
+    box-shadow: 2px 2px 12px 1px rgba(140, 140, 140, 0.5); /* Optional shadow */
+    padding-top: 20px; /* Add space for the title */
 }
 
 .card-title {
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: #034078;
+    margin-bottom: auto; /* Push other content below */
+    align-self: center; /* Align to the top of the container */
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #034078;
 }
+
+.addUser {
+    flex: 1; /* Take up the remaining vertical space */
+    display: flex;
+    justify-content: center; /* Center the form vertically */
+    align-items: center; /* Center the form horizontally */
+    width: 100%;
+}
+
 .chart-container {
   padding-right: 5%;
   padding-left: 5%;
 }
 
+
 /* Add padding around the 'adminUsers' table */
 .table-container {
   padding: 20px;
   box-sizing: border-box; /* Ensures padding doesn’t add to overall width */
+  max-height: 75vh; /* Set your desired max height */
+  overflow-y: auto; /* Add vertical scrolling */
 }
 
 #adminUsers {
@@ -271,6 +292,8 @@ select {
   justify-content: space-between;
 }
 
+
+
 .password-text {
   margin-right: 8px;
   -webkit-text-security: disc; /* Hides the password by default */
@@ -280,6 +303,11 @@ select {
   margin-left: auto;
   cursor: pointer;
 }
+
+.editpsw:hover{
+  color: red;
+}
+
 
 .popup-form {
   display: none; /* Initially hidden */
@@ -315,6 +343,20 @@ select {
 
 .popup-form button:hover {
   background-color: #444;
+}
+
+.errorText {
+  color: #d73a49;
+  font-size: 14px;
+  margin-top: 10px;
+  display: none;
+}
+
+.successText {
+  color: #000;
+  font-size: 14px;
+  margin-top: 10px;
+  display: none;
 }
 
 /* Responsive layout - makes the two columns stack on top of each other instead of next to each other on screens that are smaller than 600 px */

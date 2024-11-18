@@ -68,7 +68,7 @@
                         </div>
             
                         <div class="card-table">
-                            <p class="card-title">Add User</p>
+                            <p class="card-title">Device Availability</p>
                             <table id="devicePing">
                                 <thead>
                                     <tr>
@@ -114,7 +114,7 @@
                                             <th>Edit user</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody id="adminUsersBody">
                                         <% if (userData.length) { %>
                                             <% userData.forEach(entry => { %>
                                                 <tr>
@@ -125,7 +125,7 @@
                                                     </td>                                                    
                                                     <td><%= entry.permissions %></td>
                                                     <td>
-                                                        <a href="#" onclick="openEditPopup('<%= entry.username %>', '<%= entry.password %>', '<%= entry.permissions %>')">Edit</a>
+                                                        <a onclick="openEditPopup('<%= entry.username %>', '<%= entry.password %>', '<%= entry.permissions %>')"class="editpsw">Edit</a>
                                                     </td>
                                                 </tr>
                                             <% }) %>
@@ -139,31 +139,41 @@
                         </div>
                         <div class="card-form">
                             <p class="card-title">Add User</p>
-                            <form id="addUser" method="POST">
-                                <div class="input-container">
+                            <div class="addUser">
+                                <form id="addUser" onsubmit="event.preventDefault(); addUser();">
+                                    <div class="input-container">
                                     <label for="uname">Username</label>
                                     <input type="text" name="username" placeholder="Enter Username" id="uname" required>
-                                </div>
-                          
-                                <div class="input-container">
-                                    <label for="psw">Password</label>
-                                    <input type="password" name="password" placeholder="Enter Password" id="psw" required>
-                                </div>
-
-                                <div class="input-container">
+                                    </div>
+                                
+                                    <div class="input-container">
+                                        <label for="psw">Password</label>
+                                        <div id="userPassword" style="display: flex; align-items: center;">
+                                            <input type="password" name="password" placeholder="Enter Password" id="psw" required>
+                                            <input
+                                                id="showEditPasswordAdd"
+                                                type="checkbox"
+                                                onclick="showPassword(this.previousElementSibling)"
+                                                class="show-password-checkbox"
+                                                style="margin-left: 8px;"
+                                            />
+                                        </div>
+                                    </div>
+                                
+                                    <div class="input-container">
                                     <label for="permissions">Permissions</label>
                                     <select id="permissions" name="permissions" required>
                                         <option value="default">Default</option>
                                         <option value="admin">Admin</option>
                                     </select>
-                                </div>
-                          
-                                <button type="submit" class="submit">Submit</button>
-                                  <!-- Error message container -->
-                                <div id="errorMessage">
-                                  <p id="errorText"></p>
-                                </div>
-                            </form>
+                                    </div>
+                                
+                                    <button type="button" class="submit" onclick="addUser()">Submit</button>
+                                    <div id="errorMessage">
+                                    <p id="errorText"></p>
+                                    </div>
+                                </form>
+                            </div>                                
                         </div>
                     </div>
                 </div>
@@ -176,20 +186,40 @@
                             <label for="editUsername">Username</label>
                             <input type="text" id="editUsername" name="username" readonly>
                         </div>
-                        
                         <div class="input-container">
                             <label for="editPassword">Password</label>
-                            <input type="password" id="editPassword" name="password" required>
+                            <div id="userPassword" style="display: flex; align-items: center;">
+                                <input
+                                    type="password" 
+                                    id="editPassword"
+                                    name="password"
+                                    style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px;"
+                                    required
+                                />
+                                <input
+                                    id="showEditPassword"
+                                    type="checkbox"
+                                    onclick="showPassword(this.previousElementSibling)"
+                                    class="show-password-checkbox"
+                                    style="margin-left: 8px;"
+                                />
+                            </div>
                         </div>
+                        
                         
                         <div class="input-container">
                             <label for="editPermissions">Permissions</label>
                             <select id="editPermissions" name="permissions">
                                 <option value="default">Default</option>
-                                <option value="permissions">Permissions</option>
+                                <option value="admin">Admin</option>
                             </select>
                         </div>
-                        
+                        <div id="successMessage" style="display: none;">
+                            <p id="successText"></p>
+                        </div>
+                        <div id="errorMessagePopUp" style="display: none;">
+                            <p id="errorTextPopUp"></p>
+                        </div>
                         <button type="button" onclick="saveChanges()">Save Changes</button>
                         <button type="button" onclick="closeEditPopup()">Cancel</button>
                     </form>
@@ -199,12 +229,11 @@
 
         
         </main>
-
         <!-- Sidebar Menu -->
         <div id="mySidebar" class="sidebar">
-            <a href="#" id="dashboard-link" onclick="showDashboard()">Dashboard</a>
-            <a href="#" id="admin-link" onclick="showAdmin()">Admin</a>
-            <a href="#" id="logoutButton">Log Out</a>
+            <a id="dashboard-link" onclick="showDashboard()">Dashboard</a>
+            <a id="admin-link" onclick="showAdmin()">Admin</a>
+            <a id="logoutButton">Log Out</a>
         </div>
 
         <script src="script.js"></script>
