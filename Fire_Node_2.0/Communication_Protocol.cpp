@@ -125,7 +125,7 @@ unsigned char Calculate_Checksum(struct TX_Payload* data) {
 }
 
 
-//Calculates the checksum value from the recieved message
+//Calculates the checksum value from the received message
 unsigned char Calculate_RX_Checksum(unsigned char* data, unsigned char length) {
   unsigned char checksum = 0;
   for (unsigned char i = 0; i < length; i++) {
@@ -152,7 +152,7 @@ void Assemble_Message(struct TX_Payload* data, unsigned char* message) {
 }
 
 
-/* Function to to extract the relevant information from the recieved transmission
+/* Function to to extract the relevant information from the received transmission
    Automatically responds to requests for acknowledgement*/
 unsigned char Decode_Message(unsigned char* message, unsigned char* Sender_Address, unsigned char* Sender_Node_Type, unsigned char* payload) {
   if (message[0] != START_BYTE || message[6 + message[4]] != END_BYTE) {

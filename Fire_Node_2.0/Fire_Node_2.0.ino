@@ -31,7 +31,7 @@ void alarm_Pressed_interrupt() {
 
 void setup() {
   Serial.begin(9600);
-  
+  Comms_Set_Up();
   pinMode(Alarm_Pin, INPUT);
   pinMode(LED_B, OUTPUT);
   dht.begin();
