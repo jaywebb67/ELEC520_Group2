@@ -16,7 +16,6 @@ HardwareSerial RS485Serial(2);
 volatile bool Bus_Busy = 0;
 //global variable for safe to transmit state
 bool Safe_To_Transmit = 0;
-
 //uint16_t Bus_Monitor_Pin;
 extern uint8_t board;
 
@@ -29,40 +28,11 @@ uint8_t Sender_Node_Type;
 uint8_t Addressee;
 
 
-
-
- 
-
-// unsigned char Calculate_Checksum(struct TX_Payload* data) {
-//   unsigned char checksum = 0;
-//   for (unsigned char i = 0; i < data->length; i++) {
-//       checksum ^= data->message[i];
-//   }
-//   Serial.print("Calculated TX Checksum: "); 
-//   Serial.println(checksum, HEX);
-//   return checksum;
-// }
-
-// unsigned char Calculate_RX_Checksum(unsigned char* data, unsigned char length) {
-//   unsigned char checksum = 0;
-//   for (unsigned char i = 0; i < length; i++) {
-//       checksum ^= data[i];
-//   }
-//   Serial.print("Calculated RX Checksum: "); 
-//   Serial.println(checksum, HEX);
-//   return checksum;
-// }
 unsigned char Calculate_Checksum(struct TX_Payload* data) {
   unsigned char checksum = 0;
   for (unsigned char i = 0; i < data->length; i++) {
     checksum ^= data->message[i];
-    // Serial.print("Step ");
-    // Serial.print(i);
-    // Serial.print(": ");
-    // Serial.println(checksum, HEX);
   }
-  // Serial.print("Calculated TX Checksum: ");
-  // Serial.println(checksum, HEX);
   return checksum;
 }
 
@@ -70,13 +40,7 @@ unsigned char Calculate_RX_Checksum(unsigned char* data, unsigned char length) {
   unsigned char checksum = 0;
   for (unsigned char i = 0; i < length; i++) {
     checksum ^= data[i];
-    // Serial.print("Step ");
-    // Serial.print(i);
-    // Serial.print(": ");
-    // Serial.println(checksum, HEX);
   }
-  // Serial.print("Calculated RX Checksum: ");
-  // Serial.println(checksum, HEX);
   return checksum;
 }
 
@@ -91,7 +55,6 @@ void Assemble_Message(struct TX_Payload* data, unsigned char* message) {
   for (unsigned char i = 0; i < data->length; i++) {
       message[5 + i] = data->message[i]; // Payload
   }
-  
   
   message[5 + data->length] = Calculate_Checksum(data); // Checksum
   message[6 + data->length] = END_BYTE;                // End byte
@@ -113,56 +76,23 @@ void Transmit_To_Bus(struct TX_Payload* data, unsigned char* message){
     digitalWrite(Max485_CE, HIGH);
     RS485Serial.write(message, 7 + data->length);  
     #if !defined(ARDUINO_AVR_NANO)
-    RS485Serial.flush();  //only required for ESP32 
+    RS485Serial.flush();  //only required for ESP32 forces the cpu to block on the sending
     #endif
     digitalWrite(Max485_CE, LOW);
   }
   delay(50);
 }
-// unsigned char Decode_Message(unsigned char* message, unsigned char* Sender_Address, unsigned char* Sender_Node_Type, unsigned char* payload){
-//   Serial.print("RX_Message: ");
-//   Print_Message(message, message[7+message[4]]);
-
-//   if (message[0] != START_BYTE || message[6 + message[4]] != END_BYTE) {
-//       return 0; // Error: Invalid start or end byte
-//   }
-  
-//   *Sender_Address = message[1];       //place into variable
-//   unsigned char address = message[2]; // Destination Address byte
-//   *Sender_Node_Type = message[3];     //place into variable
-//   unsigned char length = message[4]; // Use unsigned char for consistency
-
-//   // Bounds check for payload length
-//   if (length > 34) {
-//       return 0; // Error: Payload length exceeds buffer size
-//   }
-
-//   for (unsigned char i = 0; i < length; i++) {
-//       payload[i] = message[5 + i];
-//   }
-//   unsigned char received_checksum = message[5 + length];
-//   unsigned char calculated_checksum = Calculate_RX_Checksum(&message[1], length + 4);
-
-//   if (received_checksum != calculated_checksum) {
-//       return 0; // Error: Checksum mismatch
-//   }
-
-//   return address; // Return the address for further processing
-// }
 
 unsigned char Decode_Message(unsigned char* message, unsigned char* Sender_Address, unsigned char* Sender_Node_Type, unsigned char* payload) {
-  // Serial.print("RX_Message: ");
-  // Print_Message(message, 7 + message[4]);
-
   if (message[0] != START_BYTE || message[6 + message[4]] != END_BYTE) {
     Serial.println("Invalid start or end byte");
     return 0; // Error: Invalid start or end byte
   }
 
   *Sender_Address = message[1];       // Place into variable
-  unsigned char address = message[2]; // Destination Address byte
+  unsigned char address = message[2]; // Destination Address byte to be returned
   *Sender_Node_Type = message[3];     // Place into variable
-  unsigned char length = message[4];  // Use unsigned char for consistency
+  unsigned char length = message[4];  // in function use only
 
   // Bounds check for payload length
   if (length > 34) {
@@ -177,20 +107,13 @@ unsigned char Decode_Message(unsigned char* message, unsigned char* Sender_Addre
   unsigned char received_checksum = message[5 + length];
   unsigned char calculated_checksum = Calculate_RX_Checksum(&message[5], length);  // Adjust this line
 
-  // Serial.print("Received Checksum: ");
-  // Serial.println(received_checksum, HEX);
-  // Serial.print("Calculated RX Checksum: ");
-  // Serial.println(calculated_checksum, HEX);
-
   if (received_checksum != calculated_checksum) {
     Serial.println("Checksum mismatch");
     return 0; // Error: Checksum mismatch
   }
 
-  return address; // Return the address for further processing
+  return address; // Return the destination address for further processing
 }
-
-
 
 bool Clear_To_Send(){
   if(Collision_Avoidance()){
@@ -220,19 +143,16 @@ void Bus_Monitor_Pin_interrupt() {
 
 void Board_Select(struct Set_Up_Pins* pin){
   #if defined(ARDUINO_AVR_NANO)
-  Serial.println("I'm not board");
   print_Struct(&Nano);
   pinMode(pin->Monitor, INPUT);
   pinMode(pin->CE, OUTPUT);
-  RS485Serial = SoftwareSerial(pin->RX, pin->TX); // Reinitialize with Nano pins
+  RS485Serial = SoftwareSerial(pin->RX, pin->TX); // software serial for nano
   RS485Serial.begin(9600);
-  //Bus_Monitor_Pin = pin->Monitor;
   digitalWrite(pin->CE, LOW);
   #else
   pinMode(pin->Monitor, INPUT);
   pinMode(pin->CE, OUTPUT);
-  RS485Serial.begin(9600, SERIAL_8N1, pin->RX, pin->TX);
-  //Bus_Monitor_Pin = pin->Monitor;
+  RS485Serial.begin(9600, SERIAL_8N1, pin->RX, pin->TX);  //hardware serial for ESP
   digitalWrite(pin->CE, LOW);
   #endif
 }
@@ -262,24 +182,13 @@ void print_Struct(struct Set_Up_Pins* message) {
   Serial.println(message->Monitor); // Print the actual message
 }
 
-//   unsigned char Read_Serial_Port(){
-//   int numBytes = RS485Serial.readBytes(RX_Message, sizeof(RX_Message) - 1); // Read bytes into buffer 
-//     RX_Message[numBytes] = '\0'; 
-//     Serial.print("Bytes read: "); 
-//     Serial.println(numBytes); 
-//     Print_Message(RX_Message, numBytes);
-//     unsigned char address = Process_RX_Transmission();
-//     return address;
-// }
-
 unsigned char Read_Serial_Port() {
   int index = 0;
-
-  // Clear RX_Message buffer
+  // Clear RX_Message buffer and RX_Message_Payload buffer to prevent message overlaps
   memset(RX_Message, 0, sizeof(RX_Message));
-  // Clear RX_Message_Payload buffer 
+  // Clear 
   memset(RX_Message_Payload, 0, sizeof(RX_Message_Payload));
-
+  
   // Read bytes until end byte (0x03) is found
   while (RS485Serial.available()) {
     char incomingByte = RS485Serial.read();
@@ -299,10 +208,6 @@ unsigned char Read_Serial_Port() {
 
   // Null-terminate the string
   RX_Message[index] = '\0';
-
-  // Serial.print("Bytes read: ");
-  // Serial.println(index);
-  // Print_Message(RX_Message, index);
 
   // Process the message
   unsigned char address = Process_RX_Transmission();
