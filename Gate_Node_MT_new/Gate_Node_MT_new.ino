@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <BluetoothSerial.h>
 #include "Char_Buffer.h"
+#include "Communication_Protocol.h"
 //#include <cstring>
 
 BluetoothSerial SerialBT;
@@ -247,54 +248,186 @@ void loop() {
   delay(1000);
 }
 
+/*
+volatile unsigned char buffer[MESSAGE_LENGTH];
+volatile unsigned char bufferIndex = 0;
 
-// //Task notification
-
-// #include <Arduino.h>
-
-// TaskHandle_t taskHandle;
-
-// void notifyTask(void *parameter) {
-//   while (true) {
-//     // Wait indefinitely for a notification
-//     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-//     // Once notified, perform some action
-//     Serial.println("Task notified!");
-//   }
-// }
-
-// void setup() {
-//   Serial.begin(115200);
-
-//   // Create a task
-//   xTaskCreate(notifyTask, "NotifyTask", 1000, NULL, 1, &taskHandle);
-
-//   // Simulate a delay before notifying the task
-//   delay(2000);
-//   Serial.println("Notifying task...");
-//   xTaskNotifyGive(taskHandle);
-// }
-
-// void loop() {
-//   // The loop can perform other tasks or remain empty
-// }
+void IRAM_ATTR onUartRx() {
+  char data = UART2.read();
+  if (bufferIndex < MESSAGE_LENGTH) {
+    buffer[bufferIndex++] = data;
+    
+    if (bufferIndex == MESSAGE_LENGTH || data == END_BYTE) {
+      BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+      xQueueSendFromISR(uartQueue, buffer, &xHigherPriorityTaskWoken);
+      bufferIndex = 0; // Reset buffer index for the next message
+      if (xHigherPriorityTaskWoken) {
+        portYIELD_FROM_ISR();
+      }
+    }
+  }
+}
 
 
+void TaskProcessDataCode(void *pvParameters) {
+  unsigned char receivedMessage[MESSAGE_LENGTH];
+  while (1) {
+    if (xQueueReceive(uartQueue, &receivedMessage, portMAX_DELAY)) {
+      // Process the complete message outside ISR
+      Serial.print("Received message: ");
+      for (int i = 0; i < MESSAGE_LENGTH; i++) {
+        Serial.print(receivedMessage[i], HEX);
+        Serial.print(" ");
+      }
+      Serial.println();
+    }
+  }
+}
 
-// void setup() {
-//   Serial.begin(115200);
 
-//   // Create a task for processing Bluetooth messages
-//   xTaskCreatePinnedToCore(
-//    
-// }
+#include <Arduino.h>
 
-// void loop() {
-//   // Main loop can be used for other tasks
-//   delay(1000);
-// }
+// UART Configuration
+#define RXD_PIN 16
+#define TXD_PIN 17
 
-// void processBTMessage(void *pvParameters) {
-//   
-// }
+#define START_BYTE 0x02
+#define END_BYTE 0x03
+#define MESSAGE_LENGTH 9
+
+TaskHandle_t TaskProcessData;
+QueueHandle_t uartQueue;
+
+unsigned char buffer[MESSAGE_LENGTH];
+volatile unsigned char bufferIndex = 0;
+
+void IRAM_ATTR onUartRx() {
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  char data = UART2.read();
+
+  if (bufferIndex < MESSAGE_LENGTH) {
+    buffer[bufferIndex++] = data;
+
+    // Check if the full message is received
+    if (bufferIndex == MESSAGE_LENGTH || data == END_BYTE) {
+      xQueueSendFromISR(uartQueue, buffer, &xHigherPriorityTaskWoken);
+      bufferIndex = 0; // Reset buffer index for the next message
+    }
+  }
+
+  if (xHigherPriorityTaskWoken) {
+    portYIELD_FROM_ISR();
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  // Configure UART
+  UART2.begin(9600, SERIAL_8N1, RXD_PIN, TXD_PIN);
+
+  // Initialize queue
+  uartQueue = xQueueCreate(10, MESSAGE_LENGTH * sizeof(char));
+
+  // Attach UART interrupt
+  UART2.onReceive(onUartRx);
+
+  // Create tasks
+  xTaskCreatePinnedToCore(
+    TaskProcessDataCode,   /* Task function. */
+    "TaskProcessData",     /* name of task. */
+    10000,                 /* Stack size of task */
+    NULL,                  /* parameter of the task */
+    1,                     /* priority of the task */
+    &TaskProcessData,      /* Task handle to keep track of created task */
+    0);                    /* pin task to core 0 */
+
+  if (TaskProcessData == NULL) {
+    Serial.println("Task creation failed.");
+  } else {
+    Serial.println("Task created successfully.");
+  }
+}
+
+void loop() {
+  // Your main loop code
+}
+
+void TaskProcessDataCode(void *pvParameters) {
+  unsigned char receivedMessage[MESSAGE_LENGTH];
+  while (1) {
+    if (xQueueReceive(uartQueue, &receivedMessage, portMAX_DELAY)) {
+      // Process received message
+      Serial.print("Received message: ");
+      for (int i = 0; i < MESSAGE_LENGTH; i++) {
+        Serial.print(receivedMessage[i], HEX);
+        Serial.print(" ");
+      }
+      Serial.println();
+    }
+  }
+}
+
+
+#include <Arduino.h>
+
+// UART Configuration
+#define RXD_PIN 16
+#define TXD_PIN 17
+
+TaskHandle_t TaskProcessData;
+QueueHandle_t uartQueue;
+
+void IRAM_ATTR onUartRx() {
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  char data = UART2.read();
+  xQueueSendFromISR(uartQueue, &data, &xHigherPriorityTaskWoken);
+  if (xHigherPriorityTaskWoken) {
+    portYIELD_FROM_ISR();
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  // Configure UART
+  UART2.begin(9600, SERIAL_8N1, RXD_PIN, TXD_PIN);
+
+  // Initialize queue
+  uartQueue = xQueueCreate(10, sizeof(char));
+
+  // Attach UART interrupt
+  UART2.onReceive(onUartRx);
+
+  // Create tasks
+  xTaskCreatePinnedToCore(
+    TaskProcessDataCode,   /* Task function. */
+    "TaskProcessData",     /* name of task. */
+    10000,                 /* Stack size of task */
+    NULL,                  /* parameter of the task */
+    1,                     /* priority of the task */
+    &TaskProcessData,      /* Task handle to keep track of created task */
+    0);                    /* pin task to core 0 */
+
+  // To ensure proper task creation
+  if (TaskProcessData == NULL) {
+    Serial.println("Task creation failed.");
+  } else {
+    Serial.println("Task created successfully.");
+  }
+}
+
+void loop() {
+  // Your main loop code
+}
+
+void TaskProcessDataCode(void *pvParameters) {
+  char receivedChar;
+  while (1) {
+    if (xQueueReceive(uartQueue, &receivedChar, portMAX_DELAY)) {
+      // Process received character
+      Serial.print("Received: ");
+      Serial.println(receivedChar);
+    }
+  }
+}
