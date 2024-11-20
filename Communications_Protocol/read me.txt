@@ -1,0 +1,66 @@
+	
+	Read Me
+
+To communicate on the RS485 serial bus.
+
+1) Copy the Communication_Protocol.h and Communication_Protocol.cpp into your sketch folder
+
+2) Include the header	#include "Communication_Protocol.h"
+
+3) Declare the following variables and initialise with appropriate values
+	
+	const uint8_t Home_Node_Type = 0x..;
+	const uint8_t Home_Address = 0x..;
+	uint8_t Destination_Address = 0x..;
+
+4) Declare and initialise the message variables you require
+
+	const struct TX_Payload message_name = {4, "xxxx"};  // The data type is const struct TX_Payload,  {number of characters, "message}
+
+		e.g. struct TX_Payload Hello = {2, "Hi"};
+
+5) Call the comms set up function within the setup field of your sketch.
+
+6) To transmit a message call the Transmit_To_Bus function with the a reference to your message. 
+   It will transmit to the address held in destination address.
+
+	Transmit_To_Bus(&Hello);
+   
+   This function will take care of checking that the bus is clear, the message framing, and transmission.
+
+7) To receive messages call the Read_Serial_Port function. 
+	
+	Read_Serial_Port();
+
+   This function will read the incoming bytes from the serial port, check for errors, decode the message, and set the incoming message 
+   in RX_Message_Payload, the senders address in Sender_Address, and the senders node type in Sender_Node_Type. These variables are global 
+   and declared in the .cpp file.
+   The function returns the address the message was intended for.
+   The function will automatically respond to health check requests.
+    
+
+	EXAMPLE USAGE
+
+	#include "Communication_Protocol.h"
+
+	const uint8_t Home_Node_Type = 0x32;
+	const uint8_t Home_Address = 0x12;
+	uint8_t Destination_Address = 0x28;
+
+	const struct TX_Payload Hello = {2, "Hi"};
+
+	void setup() {
+	  Comms_Set_Up();
+	}
+
+	void loop() {
+	  if(RS485Serial.available()){
+	    Addressee = Read_Serial_Port();
+	  }
+	
+	  if((Addressee == Home_Address ){
+	    //The message is for me
+	  }
+	  
+	  Transmit_To_Bus(&Hello);
+	}
