@@ -8,11 +8,11 @@
 extern SoftwareSerial RS485Serial;
 #else
 #include <HardwareSerial.h>
- extern HardwareSerial RS485Serial;
-#endif
 
-// ****PUT THIS LINE IN EACH SKETCH****THEN REMOVE FROM HERE****//
-//#define board NANO    
+extern HardwareSerial RS485Serial;
+
+#endif
+   
 #define Home_Node_Type      0x32
 #define START_BYTE          0x02
 #define END_BYTE            0x03
@@ -24,6 +24,7 @@ extern SoftwareSerial RS485Serial;
 #define ESP                 1
 #define NANO                0
 #define Bus_Monitor_Pin     2
+
 
 //.h v2.0
 struct TX_Payload {

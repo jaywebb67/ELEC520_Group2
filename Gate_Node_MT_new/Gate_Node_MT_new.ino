@@ -1,19 +1,40 @@
 #include <Arduino.h>
+#include <BluetoothSerial.h>
+#include "Char_Buffer.h"
+//#include <cstring>
+
+BluetoothSerial SerialBT;
+volatile bool btMessageFlag = false; // Global flag
+
+// Create a CharBuffer object with 10 entries, each of size 6 characters 
+CharBuffer Valid_Entrance_Codes(100, 6);
+CharBuffer Current_Codes_In_Use(100, 6);
 
 const int rowPins[4] = {8, 3, 46, 9};     // Row pins connected to the keypad
 const int colPins[4] = {10, 11, 12, 13};     // Column pins connected to the keypad
 char Input_Key_Code[6];
+char BT_Key_Code[6];
 unsigned long debounceDelay = 200;        // Debounce time in milliseconds
 volatile int keypresses = 0;
+
+const struct TX_Payload;    //put messages to transmit here
 
 // Define two task handles
 TaskHandle_t Keypad_Reader = NULL;
 TaskHandle_t Task2Handle = NULL;
+TaskHandle_t Bluetooth_Task_Handle = NULL; // Task handle for Bluetooth task
 
 volatile unsigned long lastInterruptTime = 0;
 volatile bool isPressed = false;
 
-void Key_Pressed_ISR() {
+void IRAM_ATTR Bluetooth_ISR() {
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  vTaskNotifyGiveFromISR(Bluetooth_Task_Handle, &xHigherPriorityTaskWoken);
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
+}
+
+
+void IRAM_ATTR Key_Pressed_ISR() {
   unsigned long interruptTime = millis();
   // Debounce logic
   if ((interruptTime - lastInterruptTime > debounceDelay) && !isPressed) {
@@ -25,6 +46,7 @@ void Key_Pressed_ISR() {
   }
   lastInterruptTime = interruptTime;
 }
+
 
 
 
@@ -50,7 +72,7 @@ void Keypad_Read(void *pvParameters) {
     Serial.println("Entering task 1.");
     // Disable further interrupts to avoid multiple triggers for the same key press
     for (int i = 0; i < 4; i++) {
-      detachInterrupt(digitalPinToInterrupt(colPins[i]));  // Disable interrupts on all columns
+      //detachInterrupt(digitalPinToInterrupt(colPins[i]));  // Disable interrupts on all columns
       digitalWrite(rowPins[i], HIGH); // Reset rows to HIGH (idle state)
     }
    
@@ -76,15 +98,6 @@ void Keypad_Read(void *pvParameters) {
       digitalWrite(rowPins[row], HIGH); // Deactivate row
     }
 
-    // // Process single key press 
-    // if (pressedCount == 1) { 
-    //   pressedRow = foundRow; 
-    //   pressedCol = foundCol; 
-    //   keyPressed = true; 
-    //   multipleKeysPressed = false; 
-    // } else if (pressedCount > 1) { 
-    //   multipleKeysPressed = true; 
-    // }
     // Process single or multiple key presses 
     if (pressedCount > 1) { 
       Serial.println("Multiple keys detected, rejecting input."); 
@@ -96,24 +109,21 @@ void Keypad_Read(void *pvParameters) {
     Serial.print("Key pressed: "); 
     Serial.println(key);
 
-    // if (keyPressed) {
-    //   if (!multipleKeysPressed) {
-    //     // If only one key is pressed, process it
-    //     char key = keypad[pressedRow][pressedCol]; // Set the key
-    //     Input_Key_Code[Valid_Input_Presses] = key;
-    //     Valid_Input_Presses ++;     //keep track of number of digits input
-    //     Serial.print("Key pressed: ");
-    //     Serial.println(key);
-    //     Serial.print("Number of keypresses: ");
-    //     Serial.println(keypresses);
-    //   } else {
-    //     // If multiple keys are pressed simultaneously, reject input
-    //     Serial.println("Multiple keys detected, rejecting.");
-    //     //multipleKeysPressed = false;
-    //   }
-
       if(Valid_Input_Presses == 6){
-        //notify task that uses keycode
+        // Process the valid 6-byte code
+        int x = Valid_Entrance_Codes.searchEntry(Input_Key_Code);
+        if (x < 0) {
+          Serial.println("Access Denied");
+        } else {
+          x = Current_Codes_In_Use.searchEntry(Input_Key_Code);
+          if (x < 0) {
+            Serial.println("Access Granted");
+            Current_Codes_In_Use.addEntry(Input_Key_Code);
+          } else {
+            Serial.println("Exit Goodbye");
+            Current_Codes_In_Use.deleteEntry(x); 
+          }
+        }
         Serial.println(Input_Key_Code);
         Valid_Input_Presses = 0;
       }
@@ -122,7 +132,7 @@ void Keypad_Read(void *pvParameters) {
     }
     // Reattach interrupts after debounce delay to avoid immediate retriggering
     for (int i = 0; i < 4; i++) {
-      attachInterrupt(digitalPinToInterrupt(colPins[i]), Key_Pressed_ISR, FALLING);
+      //attachInterrupt(digitalPinToInterrupt(colPins[i]), Key_Pressed_ISR, FALLING);
       digitalWrite(rowPins[i], LOW); // Reset rows to LOW for interrupt to work
 
       // Reset pressed flag 
@@ -131,23 +141,60 @@ void Keypad_Read(void *pvParameters) {
   }
 }
 
-// Task 2 function (runs on Core 1)
-void Task2(void *pvParameters) {
+// Task 2 function (runs on Core 0)
+void Process_BT_Message(void *pvParameters) {
+  uint32_t bytes_Received = 0;
   while (true) {
-    // Code for task 2
-    // Serial.println("Task 2 is running...");
-    // Serial.print("Number of keypresses: ");
-    // Serial.println(keypresses);
-    vTaskDelay(pdMS_TO_TICKS(1500)); // Simulating work in task 2
+    // Wait for the notification from ISR 
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+    while (SerialBT.available() && bytes_Received < 6) {
+      char incomingByte = SerialBT.read();
+      BT_Key_Code[bytes_Received] = incomingByte;
+      Serial.print("Received: ");
+      Serial.println(incomingByte);
+      bytes_Received++;
+    }
+
+    // Check if more than 6 bytes are received
+    if (bytes_Received > 6 || SerialBT.available()) {
+      Serial.println("Invalid Code");
+      bytes_Received = 0; // Reset bytes_Received
+      // Send to LCD or turn on a red LED to indicate the error
+      while (SerialBT.available()) { // Clear the buffer
+        SerialBT.read();
+      }
+    } else if (bytes_Received != 6) {
+      Serial.println("Invalid Code");
+      bytes_Received = 0; // Reset bytes_Received
+      // Send to LCD or turn on a red LED to indicate the error
+    } else {
+      // Process the valid 6-byte code
+      int x = Valid_Entrance_Codes.searchEntry(BT_Key_Code);
+      if (x < 0) {
+        Serial.println("Access Denied");
+      } else {
+        x = Current_Codes_In_Use.searchEntry(BT_Key_Code);
+        if (x < 0) {
+          Serial.println("Access Granted");
+          Current_Codes_In_Use.addEntry(BT_Key_Code);
+        } else {
+          Serial.println("Exit Goodbye");
+          Current_Codes_In_Use.deleteEntry(x); 
+        }
+      }
+      bytes_Received = 0; // Reset bytes_Received for the next code
+    }
   }
 }
+  
+
 
 void setup() {
   // Start Serial communication
-  Serial.begin(115200);
-  
-  // Allow some time for serial to initialize
-  delay(1000);
+  Serial.begin(9600);
+  //call function to set up correct communication pins and serial port for the board in use
+  Comms_Set_Up();
   
   // Create Task 1 (this will run on Core 0 by default)
   xTaskCreatePinnedToCore(
@@ -160,15 +207,15 @@ void setup() {
     0                    // Core 0
   );
 
-  // Create Task 2 (this will run on Core 1)
+  // Create Task 2 (this will run on Core 0)
   xTaskCreatePinnedToCore(
-    Task2,               // Task function
-    "Task 2",            // Task name
-    10000,               // Stack size (bytes)
-    NULL,                // Parameters passed to the task
-    1,                   // Task priority (higher is higher priority)
-    &Task2Handle,        // Task handle
-    0                    // Core 0
+     Process_BT_Message,        // Function to implement the task
+    "Process_BT_Message",     // Name of the task
+    10000,                    // Stack size in words
+    NULL,                     // Task input parameter
+    1,                        // Priority of the task
+    &Bluetooth_Task_Handle,   // Task handle
+    0                         // Core where the task should run
   );
 
   // Initialize row pins as OUTPUT
@@ -182,6 +229,12 @@ void setup() {
     pinMode(colPins[i], INPUT_PULLUP);
   }
 
+  SerialBT.begin("ESP32"); // Bluetooth device name
+  Serial.println("The device started, now you can pair it with Bluetooth!");
+
+  // Attach the interrupt to the Bluetooth serial available method
+  attachInterrupt(digitalPinToInterrupt(SerialBT.available()), Bluetooth_ISR, RISING);
+  
   // Set up interrupts on the column pins to detect a key press
   for (int i = 0; i < 4; i++) {
     attachInterrupt(digitalPinToInterrupt(colPins[i]), Key_Pressed_ISR, FALLING);
@@ -227,3 +280,21 @@ void loop() {
 //   // The loop can perform other tasks or remain empty
 // }
 
+
+
+// void setup() {
+//   Serial.begin(115200);
+
+//   // Create a task for processing Bluetooth messages
+//   xTaskCreatePinnedToCore(
+//    
+// }
+
+// void loop() {
+//   // Main loop can be used for other tasks
+//   delay(1000);
+// }
+
+// void processBTMessage(void *pvParameters) {
+//   
+// }
