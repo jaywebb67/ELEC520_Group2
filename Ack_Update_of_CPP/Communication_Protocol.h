@@ -16,6 +16,7 @@ extern SoftwareSerial RS485Serial;
 #define Home_Node_Type      0x32
 #define START_BYTE          0x02
 #define END_BYTE            0x03
+#define ENQ                 0X05
 #define ACK                 0x06
 #define NAK                 0x15
 #define Max485_CE           4

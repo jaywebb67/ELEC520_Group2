@@ -1,14 +1,15 @@
 #include "Communication_Protocol.h"
 #include "DHT.h"
 
+
 #define DHTPIN 5     // what pin we're connected to
 #define DHTTYPE DHT22   // DHT 22  (AM2302)
 #define Alarm_Pin 3 
 #define LED_B  13
 
-uint8_t Home_Address = 0x12;
+const uint8_t Home_Node_Type = 0x32;
+const uint8_t Home_Address = 0x12;
 uint8_t Destination_Address = 0x28;
-uint8_t Node_Type = 0x10;
 uint8_t Node_3 = 0x33;
 const char Respond_Cmd[7] = "RESPOND";
 const char Reset_Cmd[6] = "RESET";
