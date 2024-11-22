@@ -1,6 +1,6 @@
 #include "Communication_Protocol.h"
-
-//.cpp v 2.1
+#include "Node_Config.h"
+//.cpp v 2.2
 
 struct Set_Up_Pins Nano = {RX_Pin_A, TX_Pin_A, Max485_CE, Bus_Monitor_Pin};
 struct Set_Up_Pins Esp  = {RX_Pin_E, TX_Pin_E, Max485_CE, Bus_Monitor_Pin};
@@ -8,7 +8,7 @@ struct Set_Up_Pins Esp  = {RX_Pin_E, TX_Pin_E, Max485_CE, Bus_Monitor_Pin};
 #if defined(ARDUINO_AVR_NANO)
 SoftwareSerial RS485Serial(10, 11);
 #else
-HardwareSerial RS485Serial(2);
+HardwareSerial RS485Serial(2);    //creadte hardwarSerial object  attached to UART 2
 #endif
 
 
@@ -22,6 +22,7 @@ extern uint8_t board;
 //message format: Start byte, Sender address byte, Destination address byte, Sender device type code, Length byte, 33 message characters, Checksum byte, End byte.
 unsigned char TX_Message[40]; // sized for start byte,
 unsigned char RX_Message[40];
+unsigned char Forward[40];
 unsigned char RX_Message_Payload[35];
 unsigned char Ack_message[9] = { 
   START_BYTE, 
@@ -39,6 +40,7 @@ uint8_t Sender_Address;
 uint8_t Sender_Node_Type;
 uint8_t Addressee;
 
+const struct TX_Payload Intro = {1, {Location}};
 
 //*****USER FUNCTIONS*****//
 
@@ -64,6 +66,8 @@ void Comms_Set_Up(){
     Board_Select(&Esp);
   #endif
   attachInterrupt(digitalPinToInterrupt(Bus_Monitor_Pin), Bus_Monitor_Pin_interrupt, CHANGE);
+  delay(1000);
+  Introduction();
 }
 
 
@@ -71,8 +75,9 @@ void Comms_Set_Up(){
    function returns the intended recipiant address*/
 unsigned char Read_Serial_Port() {
   int index = 0;
-  // Clear RX_Message buffer and RX_Message_Payload buffer to prevent message overlaps
+  // Clear RX_Message buffer, Forward buffer and RX_Message_Payload buffer to prevent message overlaps
   memset(RX_Message, 0, sizeof(RX_Message));
+  memset(Forward, 0, sizeof(Forward));
   // Clear 
   memset(RX_Message_Payload, 0, sizeof(RX_Message_Payload));
 
@@ -80,6 +85,7 @@ unsigned char Read_Serial_Port() {
   while (RS485Serial.available()) {
     char incomingByte = RS485Serial.read();
     RX_Message[index++] = incomingByte;
+    Forward[index++] = incomingByte;
 
     // Check for buffer overflow
     if (index >= sizeof(RX_Message) - 1) {
@@ -94,6 +100,7 @@ unsigned char Read_Serial_Port() {
   }
   // Null-terminate the string
   RX_Message[index] = '\0';
+  Forward[index] = '\0';
   // Process the message
   unsigned char address = Decode_Message(RX_Message, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
   return address;
@@ -185,6 +192,12 @@ unsigned char Decode_Message(unsigned char* message, unsigned char* Sender_Addre
   if (payload[0] == ACK){
     Acknowledge(*Sender_Address);
   }
+
+  #if !defined(ARDUINO_AVR_NANO)
+  if(address == 0x0F) {
+    Forward_Messasage();
+  }
+  #endif
   return address; // Return the destination address for further processing
 }
 
@@ -271,12 +284,33 @@ void Read_Serial_Data() {
   }
 }
 
+void Introduction() {
+  bool reply_received = 0;
+  Transmit_To_Bus(&Intro);
+  while (!reply_received) {
+    if(RS485Serial.available()){
+      Addressee = Read_Serial_Port();
+      if(Addressee == Home_Address) {
+        Home_Address = RX_Message_Payload[0];
+        Destination_Address = RX_Message_Payload[1];
+        reply_received = 1;
+      }
+    }
+  }
+}
 
+void Forward_Messasage() {
+ int x = sizeof(Forward);
 
-
-
-
-
+  if(Clear_To_Send()){
+    digitalWrite(Max485_CE, HIGH);
+    RS485Serial.write(Forward, x);  
+    #if !defined(ARDUINO_AVR_NANO)
+    RS485Serial.flush();  //only required for ESP32 forces the cpu to block on the sending
+    #endif
+    digitalWrite(Max485_CE, LOW);
+  }
+}
 
 
 
