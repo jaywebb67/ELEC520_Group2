@@ -8,16 +8,16 @@
 #include "driver/uart.h"
 #include "driver/gpio.h"
 
-#define MESSAGE_LENGTH 40
+// #define MESSAGE_LENGTH 40
 #define DEVICE_NAME "Gate 1"
 
-const uint8_t Home_Node_Type = 0x35;
-const uint8_t Home_Address = 0x13;
+//const uint8_t Home_Node_Type = 0x35;
+uint8_t Home_Address = 0x13;
 uint8_t Destination_Address = 0x28;
 
 BluetoothSerial SerialBT;
 
-QueueHandle_t RX_Queue;
+
 QueueHandle_t LCD_Queue;
 
 //create LCD object
@@ -31,13 +31,13 @@ const int rowPins[4] = {8, 3, 46, 9};     // Row pins connected to the keypad
 const int colPins[4] = {10, 11, 12, 13};     // Column pins connected to the keypad
 char Input_Key_Code[6];
 char BT_Key_Code[6];
-volatile unsigned char buffer[MESSAGE_LENGTH];
-volatile unsigned char bufferIndex = 0;
+// volatile unsigned char buffer[MESSAGE_LENGTH];
+// volatile unsigned char bufferIndex = 0;
 unsigned long debounceDelay = 200;        // Debounce time in milliseconds
 volatile int keypresses = 0;
 
-const struct TX_Payload User = {4, "User"};    //put messages to transmit here
-const struct TX_Payload NoUser = {7, "No User"};
+ struct TX_Payload User = {4, "User"};    //put messages to transmit here
+ struct TX_Payload NoUser = {7, "No User"};
 
 typedef void (*FunctionPointer)(void);
 
@@ -50,7 +50,7 @@ typedef struct {
 // Define task handles
 TaskHandle_t Keypad_Reader = NULL;
 TaskHandle_t Bluetooth_Task_Handle = NULL; // Task handle for Bluetooth task
-TaskHandle_t RX_Message_Handle;
+// TaskHandle_t RX_Message_Handle;
 TaskHandle_t LCD_Thread_Handle;
 
 volatile unsigned long lastInterruptTime = 0;
@@ -77,24 +77,7 @@ void IRAM_ATTR Key_Pressed_ISR() {
 }
 
 
-void IRAM_ATTR onUartRx() {
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  char data = RS485Serial.read(); // Read data from HardwareSerial
 
-  if (bufferIndex < 40) {
-    buffer[bufferIndex++] = data;
-
-    // Check if the full message is received
-    if (bufferIndex == MESSAGE_LENGTH || data == END_BYTE) {
-      xQueueSendFromISR(RX_Queue, (const void*)buffer, &xHigherPriorityTaskWoken); // Cast buffer to const void*
-      bufferIndex = 0; // Reset buffer index for the next message
-    }
-  }
-
-  if (xHigherPriorityTaskWoken) {
-    portYIELD_FROM_ISR();
-  }
-}
 
 
 void Enter_Mess() {
@@ -343,23 +326,23 @@ void Process_BT_Message(void *pvParameters) {
   }
 }
 
-// Task 3 function
-void RX_Message_Process(void *pvParameters) {
-  unsigned char receivedMessage[MESSAGE_LENGTH];
-  while (1) {
-    if (xQueueReceive(RX_Queue, &receivedMessage, portMAX_DELAY)) {
+// // RS485 serial port task
+// void RX_Message_Process(void *pvParameters) {
+//   unsigned char receivedMessage[MESSAGE_LENGTH];
+//   while (1) {
+//     if (xQueueReceive(RX_Queue, &receivedMessage, portMAX_DELAY)) {
 
-      Addressee = Decode_Message(receivedMessage, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
-      // Process received message
-      Serial.print("Received message: ");
-      for (int i = 0; i < MESSAGE_LENGTH; i++) {
-        Serial.print(receivedMessage[i], HEX);
-        Serial.print(" ");
-      }
-      Serial.println();
-    }
-  }
-}
+//       Addressee = Decode_Message(receivedMessage, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
+//       // Process received message
+//       Serial.print("Received message: ");
+//       for (int i = 0; i < MESSAGE_LENGTH; i++) {
+//         Serial.print(receivedMessage[i], HEX);
+//         Serial.print(" ");
+//       }
+//       Serial.println();
+//     }
+//   }
+// }
 
 // Task 4 function
 void LCD_Thread(void *pvParameters) {
@@ -387,7 +370,7 @@ void setup() {
   lcd.backlight();
 
   // Initialize queue
-  RX_Queue = xQueueCreate(10, MESSAGE_LENGTH * sizeof(char));
+  // RX_Queue = xQueueCreate(10, MESSAGE_LENGTH * sizeof(char));
   LCD_Queue = xQueueCreate(10, sizeof(QueueItem));
   
   // Create Task 1 (runs on Core 0 by default)
@@ -412,16 +395,16 @@ void setup() {
     0                         // Core where the task should run
   );
 
-  // Create task 3 (rus on core 0)
-  xTaskCreatePinnedToCore(
-     RX_Message_Process,  // Task function. 
-    "RX_Message_Process",     // name of task. 
-    10000,                    // Stack size of task 
-    NULL,                     // parameter of the task 
-    2,                        // priority of the task 
-    &RX_Message_Handle,      // Task handle to keep track of created task 
-    0                         // pin task to core 0 
-    );                       
+  // // Create task 3 (rus on core 0)
+  // xTaskCreatePinnedToCore(
+  //    RX_Message_Process,  // Task function. 
+  //   "RX_Message_Process",     // name of task. 
+  //   10000,                    // Stack size of task 
+  //   NULL,                     // parameter of the task 
+  //   2,                        // priority of the task 
+  //   &RX_Message_Handle,      // Task handle to keep track of created task 
+  //   0                         // pin task to core 0 
+  //   );                       
 
   // Create task 4 (runs on core 0)
   xTaskCreatePinnedToCore(
@@ -453,8 +436,8 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(colPins[i]), Key_Pressed_ISR, FALLING);
   }
 
-  // Attach UART interrupt 
-  RS485Serial.onReceive(onUartRx); // Attach the interrupt handler
+  // // Attach UART interrupt 
+  // RS485Serial.onReceive(onUartRx); // Attach the interrupt handler
 
   Enter_Mess();
 }

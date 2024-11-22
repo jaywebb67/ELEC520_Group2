@@ -24,7 +24,7 @@ extern HardwareSerial RS485Serial;
 #define ESP                 1
 #define NANO                0
 #define Bus_Monitor_Pin     2
-
+#define MESSAGE_LENGTH      40
 
 //.h v2.0
 struct TX_Payload {
@@ -54,7 +54,11 @@ extern uint8_t Sender_Address;
 extern uint8_t Sender_Node_Type;
 extern uint8_t Addressee;
 extern uint8_t Sender_Node_Type;
+extern volatile unsigned char buffer[MESSAGE_LENGTH];
+extern volatile unsigned char bufferIndex;
 
+extern QueueHandle_t RX_Queue;
+extern TaskHandle_t RX_Message_Handle;
 
 void Print_Message(unsigned char* message, unsigned char length);
 unsigned char Calculate_Checksum(struct TX_Payload* data);
@@ -73,6 +77,8 @@ void Board_Select();
 void print_Struct(struct Set_Up_Pins* message);
 unsigned char Read_Serial_Port();
 unsigned char Process_RX_Transmission();
+void onUartRx();
+void RX_Message_Process(void *pvParameters);
 
 
 #endif

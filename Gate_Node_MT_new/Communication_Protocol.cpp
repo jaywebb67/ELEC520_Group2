@@ -28,8 +28,11 @@ uint8_t Sender_Address;
 uint8_t Sender_Node_Type;
 uint8_t Addressee;
 
+volatile unsigned char buffer[MESSAGE_LENGTH];
+volatile unsigned char bufferIndex = 0;
 
-
+QueueHandle_t RX_Queue;
+TaskHandle_t RX_Message_Handle;
 // unsigned char Calculate_Checksum(struct TX_Payload* data) {
 //   unsigned char checksum = 0;
 //   for (unsigned char i = 0; i < data->length; i++) {
@@ -240,6 +243,21 @@ void Comms_Set_Up(){
   Board_Select(&Nano);
   #else 
   Board_Select(&Esp);
+  RX_Queue = xQueueCreate(10, MESSAGE_LENGTH * sizeof(char));
+
+  // Create task 3 (rus on core 0)
+  xTaskCreatePinnedToCore(
+     RX_Message_Process,  // Task function. 
+    "RX_Message_Process",     // name of task. 
+    10000,                    // Stack size of task 
+    NULL,                     // parameter of the task 
+    2,                        // priority of the task 
+    &RX_Message_Handle,      // Task handle to keep track of created task 
+    0                         // pin task to core 0 
+    );       
+
+  // Attach UART interrupt 
+  RS485Serial.onReceive(onUartRx); // Attach the interrupt handler
   #endif
   attachInterrupt(digitalPinToInterrupt(Bus_Monitor_Pin), Bus_Monitor_Pin_interrupt, CHANGE);
   
@@ -310,3 +328,39 @@ unsigned char Process_RX_Transmission(){
   return Decode_Message(RX_Message, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
 }
 
+void IRAM_ATTR onUartRx() {
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  char data = RS485Serial.read(); // Read data from HardwareSerial
+
+  if (bufferIndex < 40) {
+    buffer[bufferIndex++] = data;
+
+    // Check if the full message is received
+    if (bufferIndex == MESSAGE_LENGTH || data == END_BYTE) {
+      xQueueSendFromISR(RX_Queue, (const void*)buffer, &xHigherPriorityTaskWoken); // Cast buffer to const void*
+      bufferIndex = 0; // Reset buffer index for the next message
+    }
+  }
+
+  if (xHigherPriorityTaskWoken) {
+    portYIELD_FROM_ISR();
+  }
+}
+
+// RS485 serial port task
+void RX_Message_Process(void *pvParameters) {
+  unsigned char receivedMessage[MESSAGE_LENGTH];
+  while (1) {
+    if (xQueueReceive(RX_Queue, &receivedMessage, portMAX_DELAY)) {
+
+      Addressee = Decode_Message(receivedMessage, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
+      // Process received message
+      Serial.print("Received message: ");
+      for (int i = 0; i < MESSAGE_LENGTH; i++) {
+        Serial.print(receivedMessage[i], HEX);
+        Serial.print(" ");
+      }
+      Serial.println();
+    }
+  }
+}
