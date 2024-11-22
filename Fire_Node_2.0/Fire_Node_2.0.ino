@@ -1,21 +1,20 @@
 #include "Communication_Protocol.h"
 #include "DHT.h"
+#include "Node_Config.h"
 
 
-#define DHTPIN 5     // what pin we're connected to
-#define DHTTYPE DHT22   // DHT 22  (AM2302)
-#define Alarm_Pin 3 
-#define LED_B  13
+   //need to send location byte may need to be variable to fit in struct
 
 const uint8_t Home_Node_Type = 0x32;
-const uint8_t Home_Address = 0x12;
-uint8_t Destination_Address = 0x28;
+uint8_t Home_Address = 0x0F;    //Default address for initial set up
+uint8_t Destination_Address = 0xFF;   //Default address for initial set up
 uint8_t Node_3 = 0x33;
 const char Respond_Cmd[7] = "RESPOND";
 const char Reset_Cmd[6] = "RESET";
 volatile bool alarm_Pressed = false;
 String LED = "LED";
 const uint32_t Max_Temp = 40;
+
 
 const struct TX_Payload Fire_1 = {21, "Call button activated"};
 const struct TX_Payload Fire_2 = {12, "Sensor error"};
