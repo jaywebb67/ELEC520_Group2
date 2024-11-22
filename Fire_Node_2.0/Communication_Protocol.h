@@ -17,6 +17,7 @@ extern SoftwareSerial RS485Serial;
 #define END_BYTE            0x03
 #define ENQ                 0X05
 #define ACK                 0x06
+#define DEFAULT_ADD         0x1
 #define Max485_CE           4
 #define RX_Pin_A            10
 #define TX_Pin_A            11
@@ -39,7 +40,7 @@ struct Set_Up_Pins {
   uint16_t Monitor;
 };
         
-extern const uint8_t Home_Address;
+extern uint8_t Home_Address;
 extern const uint8_t Home_Node_Type;
 extern uint8_t Destination_Address;
 extern uint8_t Sender_Address;
@@ -49,12 +50,14 @@ extern struct Set_Up_Pins Nano;
 extern struct Set_Up_Pins Esp;
 extern unsigned char TX_Message[40];
 extern unsigned char RX_Message[40];
+extern unsigned char Forward[40];
 extern unsigned char RX_Message_Payload[35];
 extern unsigned char Ack_message[9];
 extern uint8_t Sender_Address;
 extern uint8_t Sender_Node_Type;
 extern uint8_t Addressee;
 extern uint8_t Sender_Node_Type;
+extern const struct TX_Payload Intro;
 
 
 
@@ -76,6 +79,8 @@ void print_Struct(struct Set_Up_Pins* message);
 unsigned char Read_Serial_Port();
 unsigned char Process_RX_Transmission();
 void Acknowledge(unsigned char* dest, unsigned char* message = Ack_message );
+void Introduction();
+void Forward_Messasage();
 
 
 #endif
