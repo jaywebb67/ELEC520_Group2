@@ -3,12 +3,14 @@
 
 #include <Arduino.h>
 
+
 #if defined(ARDUINO_AVR_NANO)
 #include <SoftwareSerial.h>
 extern SoftwareSerial RS485Serial;
 #else
 #include <HardwareSerial.h>
  extern HardwareSerial RS485Serial;
+ extern QueueHandle_t RX_Queue;
 #endif
 
   
@@ -26,8 +28,9 @@ extern SoftwareSerial RS485Serial;
 #define ESP                 1
 #define NANO                0
 #define Bus_Monitor_Pin     2
+#define MESSAGE_LENGTH      40
 
-//.h v2.0
+//.h v2.3
 struct TX_Payload {
   unsigned char length;
   char message[35];
@@ -58,6 +61,8 @@ extern uint8_t Sender_Node_Type;
 extern uint8_t Addressee;
 extern uint8_t Sender_Node_Type;
 extern const struct TX_Payload Intro;
+extern volatile unsigned char buffer[MESSAGE_LENGTH];
+extern volatile unsigned char bufferIndex;
 
 
 
@@ -81,6 +86,8 @@ unsigned char Process_RX_Transmission();
 void Acknowledge(unsigned char* dest, unsigned char* message = Ack_message );
 void Introduction();
 void Forward_Messasage();
+void RX_Message_Process(void *pvParameters);
+void onUartRx();
 
 
 #endif

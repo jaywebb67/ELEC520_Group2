@@ -1,6 +1,6 @@
 #include "Communication_Protocol.h"
 #include "Node_Config.h"
-//.cpp v 2.2
+//.cpp v 2.3
 
 struct Set_Up_Pins Nano = {RX_Pin_A, TX_Pin_A, Max485_CE, Bus_Monitor_Pin};
 struct Set_Up_Pins Esp  = {RX_Pin_E, TX_Pin_E, Max485_CE, Bus_Monitor_Pin};
@@ -9,6 +9,9 @@ struct Set_Up_Pins Esp  = {RX_Pin_E, TX_Pin_E, Max485_CE, Bus_Monitor_Pin};
 SoftwareSerial RS485Serial(10, 11);
 #else
 HardwareSerial RS485Serial(2);    //creadte hardwarSerial object  attached to UART 2
+volatile unsigned char buffer[MESSAGE_LENGTH];
+volatile unsigned char bufferIndex = 0;
+QueueHandle_t RX_Queue;
 #endif
 
 
@@ -42,6 +45,7 @@ uint8_t Addressee;
 
 const struct TX_Payload Intro = {1, {Location}};
 
+
 //*****USER FUNCTIONS*****//
 
 // Call this function to transmit data the message field is predefined in the header 
@@ -64,6 +68,21 @@ void Comms_Set_Up(){
   Board_Select(&Nano);
   #else 
     Board_Select(&Esp);
+    RX_Queue = xQueueCreate(10, MESSAGE_LENGTH * sizeof(char));
+
+  // Create task 3 (rus on core 0)
+  xTaskCreatePinnedToCore(
+     RX_Message_Process,  // Task function. 
+    "RX_Message_Process",     // name of task. 
+    10000,                    // Stack size of task 
+    NULL,                     // parameter of the task 
+    2,                        // priority of the task 
+    &RX_Message_Handle,      // Task handle to keep track of created task 
+    0                         // pin task to core 0 
+    );       
+
+  // Attach UART interrupt 
+  RS485Serial.onReceive(onUartRx); // Attach the interrupt handler
   #endif
   attachInterrupt(digitalPinToInterrupt(Bus_Monitor_Pin), Bus_Monitor_Pin_interrupt, CHANGE);
   delay(1000);
@@ -312,8 +331,45 @@ void Forward_Messasage() {
   }
 }
 
+#if !defined(ARDUINO_AVR_NANO)
+// ISR for multi thread applications
+void IRAM_ATTR onUartRx() {
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  char data = RS485Serial.read(); // Read data from HardwareSerial
 
+  if (bufferIndex < 40) {
+    buffer[bufferIndex++] = data;
 
+    // Check if the full message is received
+    if (bufferIndex == MESSAGE_LENGTH || data == END_BYTE) {
+      xQueueSendFromISR(RX_Queue, (const void*)buffer, &xHigherPriorityTaskWoken); // Cast buffer to const void*
+      bufferIndex = 0; // Reset buffer index for the next message
+    }
+  }
+
+  if (xHigherPriorityTaskWoken) {
+    portYIELD_FROM_ISR();
+  }
+}
+
+// RS485 serial port task
+void RX_Message_Process(void *pvParameters) {
+  unsigned char receivedMessage[MESSAGE_LENGTH];
+  while (1) {
+    if (xQueueReceive(RX_Queue, &receivedMessage, portMAX_DELAY)) {
+
+      Addressee = Decode_Message(receivedMessage, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
+      // Process received message
+      Serial.print("Received message: ");
+      for (int i = 0; i < MESSAGE_LENGTH; i++) {
+        Serial.print(receivedMessage[i], HEX);
+        Serial.print(" ");
+      }
+      Serial.println();
+    }
+  }
+}
+#endif
 
 
 
