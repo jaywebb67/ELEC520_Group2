@@ -8,7 +8,7 @@ struct Set_Up_Pins Esp  = {RX_Pin_E, TX_Pin_E, Max485_CE, Bus_Monitor_Pin};
 #if defined(ARDUINO_AVR_NANO)
 SoftwareSerial RS485Serial(10, 11);
 #else
-HardwareSerial RS485Serial(2);
+HardwareSerial RS485Serial(2);  //
 #endif
 
 
@@ -239,7 +239,7 @@ void Comms_Set_Up(){
   #if defined(ARDUINO_AVR_NANO)
   Board_Select(&Nano);
   #else 
-    Board_Select(&Esp);
+  Board_Select(&Esp);
   #endif
   attachInterrupt(digitalPinToInterrupt(Bus_Monitor_Pin), Bus_Monitor_Pin_interrupt, CHANGE);
   
