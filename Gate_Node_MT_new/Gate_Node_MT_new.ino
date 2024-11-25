@@ -31,6 +31,7 @@ const int rowPins[4] = {8, 3, 46, 9};     // Row pins connected to the keypad
 const int colPins[4] = {10, 11, 12, 13};     // Column pins connected to the keypad
 char Input_Key_Code[6];
 char BT_Key_Code[6];
+char Start_Pass[6] = {"012345"};
 // volatile unsigned char buffer[MESSAGE_LENGTH];
 // volatile unsigned char bufferIndex = 0;
 unsigned long debounceDelay = 200;        // Debounce time in milliseconds

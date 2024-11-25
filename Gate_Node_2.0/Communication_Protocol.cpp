@@ -1,5 +1,5 @@
 #include "Communication_Protocol.h"
-#include "Node_Config.h"
+//#include "Node_Config.h"
 //.cpp v 2.3
 
 struct Set_Up_Pins Nano = {RX_Pin_A, TX_Pin_A, Max485_CE, Bus_Monitor_Pin};
@@ -12,6 +12,7 @@ HardwareSerial RS485Serial(2);    //creadte hardwarSerial object  attached to UA
 volatile unsigned char buffer[MESSAGE_LENGTH];
 volatile unsigned char bufferIndex = 0;
 QueueHandle_t RX_Queue;
+TaskHandle_t RX_Message_Handle;
 #endif
 
 
@@ -64,11 +65,13 @@ void Transmit_To_Bus(struct TX_Payload* data, unsigned char* message){
 
 //Call this function in setup to initialise serial communications infrastructure
 void Comms_Set_Up(){
+  Serial.println("Comms setup");
   #if defined(ARDUINO_AVR_NANO)
   Board_Select(&Nano);
   #else 
-    Board_Select(&Esp);
-    RX_Queue = xQueueCreate(10, MESSAGE_LENGTH * sizeof(char));
+  Serial.println("ESP32 Comms setup");
+  Board_Select(&Esp);
+  RX_Queue = xQueueCreate(10, MESSAGE_LENGTH * sizeof(char));
 
   // Create task 3 (rus on core 0)
   xTaskCreatePinnedToCore(
@@ -86,7 +89,8 @@ void Comms_Set_Up(){
   #endif
   attachInterrupt(digitalPinToInterrupt(Bus_Monitor_Pin), Bus_Monitor_Pin_interrupt, CHANGE);
   delay(1000);
-  Introduction();
+  //Introduction();
+  Serial.println("End of ESp32 Comms setup");
 }
 
 
