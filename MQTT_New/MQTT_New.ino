@@ -49,7 +49,7 @@ struct MqttMessage {
 };
 
 String payload = "";
-
+String ping = "";
 // MQTT server details
 const char* mqttServer = "40c06ef97ec5427eb54aa49e5c03c12c.s1.eu.hivemq.cloud";  // MQTT broker IP or URL
 const int mqttPort = 8883;                    // Port for secure MQTT (typically 8883)
@@ -148,7 +148,8 @@ void reconnect(int onSetUp) {
   while (!mqttClient.connected()) {
     Serial.print("Attempting MQTT connection with clientId: ");
     Serial.println(clientId);
-    if (mqttClient.connect(clientId.c_str(), "esp32", "sub123")) {
+    String willMessage = clientId + " offline";
+    if (mqttClient.connect(clientId.c_str(), "esp32", "sub123","ELEC520/devicePing",0,1,willMessage.c_str())) {
       Serial.println("connected");
       //delay(100);
       // Subscribe to relevant topics based on setup phase
@@ -156,13 +157,13 @@ void reconnect(int onSetUp) {
         Serial.println("Initialising deviceID");
         mqttClient.subscribe("ELEC520/devices/update", 1);
         //delay(100);
-        mqttClient.publish("ELEC520/devices/view", "Gate");
+        mqttClient.publish("ELEC520/devices/client", "Gate");
       }
       if (onSetUp) {
         Serial.println("Initialising users");
         mqttClient.subscribe("ELEC520/users/#", 1);
         //delay(100);
-        mqttClient.publish("ELEC520/users/view","Update Users from database");
+        mqttClient.publish("ELEC520/users/view",clientId.c_str());
         
       }
       //vTaskDelay(pdMS_TO_TICKS(5000));  // Delay for 1 seconds (10000 ms)
@@ -243,15 +244,15 @@ void checkPassword() {
         // Check if entered password matches any stored password
         if (strcmp(currentInput, password.c_str()) == 0) {
             lcd.print("     Granted    ");
-            String message = username + " logged in";  // Customize message for MQTT
-            mqttClient.publish("ELEC520/test", message.c_str());  // Publish username
+            String message = username + " " + clientId ;  // Customize message for MQTT
+            mqttClient.publish("ELEC520/userAccess", message.c_str());  // Publish username
             mqttClient.publish("ELEC520/alarm", "Alarm Disabled");  // Publish username
             matchFound = true;
             delay(1000);
             break;
         }
     }
-
+  
     file.close();
 
     if (!matchFound) {
@@ -291,12 +292,9 @@ void mqttHandler(void* pvParameters) {
   while (true) {
     // Check if there’s a message in the queue
     if (xQueueReceive(messageQueue, &receivedMsg, portMAX_DELAY) == pdTRUE) {
-      // Serial.print("Topic: ");
-      // Serial.print(receivedMsg.topic);
-      // Serial.print(", Message: ");  
-      
       // Add additional processing code here if needed
       // Check if the message is for adding a new user credential
+      receivedMsg.payload.trim();
       if (receivedMsg.topic == "ELEC520/users/add") {
         Serial.println(receivedMsg.payload);
         // Open the credentials file in append mode
@@ -332,6 +330,7 @@ void mqttHandler(void* pvParameters) {
           file.flush();  // Ensure data is written immediately
           Serial.println("Device ID written to file: " + receivedMsg.payload);
           clientId = receivedMsg.payload;
+          ping = clientId + " online"; 
           file.close();
           return;
         } else {
@@ -471,6 +470,7 @@ void loop() {
   } else {
     checkPassword();
   }
+  mqttClient.publish("ELEC520/devicePing",ping.c_str());
   mqttClient.loop();
 }
 

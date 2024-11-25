@@ -1,8 +1,216 @@
 // Permissions variable to control access to the Admin section
 const userPermissions = '<%= permissions %>'; // Replace with actual permission-checking method if needed
+// Import the MQTT library
 
-// Get current sensor readings when the page loads
-window.addEventListener('load', getReadings);
+const userSource = new EventSource('/api/userAccess-updates');
+const deviceSource = new EventSource('/api/deviceStatus-updates');
+
+userSource.addEventListener('open', function () {
+  console.log('User access SSE connection opened');
+});
+
+deviceSource.addEventListener('open', function () {
+  console.log('Device status SSE connection opened');
+});
+
+userSource.addEventListener('message', function (e) {
+  console.log('UserAccess table update received:', e.data);
+
+  // Fetch the updated data and refresh the table
+  fetch('/api/get-userAccess-data')
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log("Updated userAccess data:", data);
+    
+      // Get the table body element
+      const tableBody = document.getElementById("useraccess").querySelector("tbody");
+      if (!tableBody) {
+        console.error("Table body not found. Ensure the table structure is correct in the HTML.");
+        return;
+      }
+    
+      // Clear existing rows
+      tableBody.innerHTML = '';
+    
+      // Iterate over the data array and populate the table
+      data.forEach(rowData => {
+        const row = document.createElement("tr");
+    
+        // Create and populate the Username cell
+        const usernameCell = document.createElement("td");
+        usernameCell.textContent = rowData.user || "Unknown"; // Fallback to "Unknown" if user field is missing
+        row.appendChild(usernameCell);
+    
+        // Create and populate the Time Accessed cell
+        const timeAccessedCell = document.createElement("td");
+        timeAccessedCell.textContent = new Date(rowData.timeAccessed).toLocaleString() || "Unknown"; // Format timestamp
+        row.appendChild(timeAccessedCell);
+    
+        // Create and populate the Location cell
+        const locationCell = document.createElement("td");
+        locationCell.textContent = rowData.location || "Unknown"; // Fallback to "Unknown" if location field is missing
+        row.appendChild(locationCell);
+    
+        // Append the row to the table body
+        tableBody.appendChild(row);
+
+        console.log("Updated table");
+      });
+    })
+    .catch(error => console.error("Error updating table data:", error));    
+});
+
+deviceSource.addEventListener('message', function (e) {
+  console.log('devicePing table update received:', e.data);
+
+  // Fetch the updated data and refresh the table
+  fetch('/api/get-deviceStatus-data')
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log("Updated devicePing data:", data);
+    
+      // Get the table body element
+      const tableBody = document.getElementById("devicePing").querySelector("tbody");
+      if (!tableBody) {
+        console.error("Table body not found. Ensure the table structure is correct in the HTML.");
+        return;
+      }
+    
+      // Clear existing rows
+      tableBody.innerHTML = '';
+    
+      // Iterate over the data array and populate the table
+      data.forEach(rowData => {
+        const row = document.createElement("tr");
+    
+        // Create and populate the Username cell
+        const deviceIDCell = document.createElement("td");
+        deviceIDCell.textContent = rowData.deviceID || "Unknown"; // Fallback to "Unknown" if user field is missing
+        row.appendChild(deviceIDCell);
+    
+        // Create and populate the Time Accessed cell
+        const lastPingCell = document.createElement("td");
+        lastPingCell.textContent = new Date(rowData.lastPing).toLocaleString() || "Unknown"; // Format timestamp
+        row.appendChild(lastPingCell);
+    
+        // Create and populate the Status cell
+        const statusCell = document.createElement("td");
+        const imageCell = document.createElement("img");
+
+        // Dynamically set the image source and alt text based on the rowData's status
+        if (rowData.status === "online") {
+          imageCell.src = "online.png"; // Path to the "online" image
+          imageCell.alt = "Online";
+        } else {
+          imageCell.src = "offline.png"; // Path to the "offline" image
+          imageCell.alt = "Offline";
+        }
+
+        // Append the image to the status cell and the status cell to the row
+        statusCell.appendChild(imageCell);
+        row.appendChild(statusCell);
+        // Append the row to the table body
+        tableBody.appendChild(row);
+
+        console.log("Updated table");
+      });
+    })
+    .catch(error => console.error("Error updating table data:", error));    
+});
+
+userSource.addEventListener('error', function (e) {
+  console.error('User access SSE connection error:', e);
+  if (e.target.readyState === EventSource.CLOSED) {
+    console.log('User access SSE connection closed');
+  }
+});
+
+deviceSource.addEventListener('error', function (e) {
+  console.error('Device status SSE connection error:', e);
+  if (e.target.readyState === EventSource.CLOSED) {
+    console.log('Device status SSE connection closed');
+  }
+});
+
+
+
+// Connect to the MQTT broker with authentication
+const mqttClient = mqtt.connect('wss://40c06ef97ec5427eb54aa49e5c03c12c.s1.eu.hivemq.cloud:8884/mqtt', {
+  username: 'dashboardweb', // Replace with your MQTT username
+  password: 'Dashboardwebpass1', // Replace with your MQTT password
+});
+
+mqttClient.on('connect', function () {
+  console.log('MQTT Connected');
+
+  // Subscribe to topics for temperature and IMU data
+  mqttClient.subscribe('ELEC520/temperature', function (err) {
+    if (!err) console.log('Subscribed to ELEC520/temperature');
+  });
+
+  mqttClient.subscribe('ELEC520/imu', function (err) {
+    if (!err) console.log('Subscribed to ELEC520/imu');
+  });
+});
+
+mqttClient.on('error', function (err) {
+  console.error('MQTT Connection Error:', err);
+});
+
+
+// Handle incoming MQTT messages
+mqttClient.on('message', function (topic, message) {
+  const payload = JSON.parse(message.toString());
+  console.log(`Received message on ${topic}:`, payload);
+
+  if (topic === 'ELEC520/temperature') {
+    plotTemperature(payload);
+  } else if (topic === 'ELEC520/imu') {
+    plotIMU(payload);
+  }
+});
+
+// Plot temperature data on the chart
+function plotTemperature(jsonValue) {
+  const keys = Object.keys(jsonValue);
+
+  keys.forEach((key, i) => {
+    const x = (new Date()).getTime(); // Current timestamp
+    const y = Number(jsonValue[key]);
+
+    if (chartT.series[i].data.length > 19) {
+      chartT.series[i].addPoint([x, y], true, true, true); // Shift old points
+    } else {
+      chartT.series[i].addPoint([x, y], true, false, true);
+    }
+  });
+}
+
+// Plot IMU data on the chart
+function plotIMU(jsonValue) {
+  const axes = ['x', 'y', 'z'];
+
+  axes.forEach((axis, i) => {
+    const x = (new Date()).getTime(); // Current timestamp
+    const y = Number(jsonValue[axis]);
+
+    if (chartI.series[i].data.length > 19) {
+      chartI.series[i].addPoint([x, y], true, true, true); // Shift old points
+    } else {
+      chartI.series[i].addPoint([x, y], true, false, true);
+    }
+  });
+}
 
 // Create Temperature Chart
 var chartT = new Highcharts.Chart({
@@ -106,45 +314,6 @@ var chartI = new Highcharts.Chart({
   }
 });
 
-
-
-//Plot temperature in the temperature chart
-function plotTemperature(jsonValue) {
-
-  var keys = Object.keys(jsonValue);
-  console.log(keys);
-  console.log(keys.length);
-
-  for (var i = 0; i < keys.length; i++){
-    var x = (new Date()).getTime();
-    console.log(x);
-    const key = keys[i];
-    var y = Number(jsonValue[key]);
-    console.log(y);
-
-    if(chartT.series[i].data.length > 40) {
-      chartT.series[i].addPoint([x, y], true, true, true);
-    } else {
-      chartT.series[i].addPoint([x, y], true, false, true);
-    }
-
-  }
-}
-
-// Function to get current readings on the webpage when it loads for the first time
-function getReadings(){
-  var xhr = new XMLHttpRequest();
-  xhr.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      var myObj = JSON.parse(this.responseText);
-      console.log(myObj);
-      plotTemperature(myObj);
-    }
-  };
-  xhr.open("GET", "/readings", true);
-  xhr.send();
-}
-
 // Function to close the sidebar if clicking outside of it
 function closeNavOnClickOutside(event) {
   const sidebar = document.getElementById("mySidebar");
@@ -158,16 +327,20 @@ function closeNavOnClickOutside(event) {
 
 document.addEventListener('DOMContentLoaded', function() {
   const userPermissions = document.body.getAttribute('data-permissions');
+
   console.log("User Permissions in JS:", userPermissions); // Log for debugging
 
   // Only show Admin link if the user has admin permissions
   const adminLink = document.getElementById("admin-link");
+  const codeLink = document.getElementById("gateCode-link");
   if (userPermissions !== 'admin' && adminLink) {
       adminLink.style.display = 'none';
       adminLink.onclick = "";
+      codeLink.style.display = 'block';
   } else {
       adminLink.style.display = 'block';
       adminLink.onclick = showAdmin; // Correctly assign the function reference
+      codeLink.style.display = 'none';
   }
   showDashboard();
 });
@@ -192,10 +365,96 @@ document.getElementById('logoutButton').addEventListener('click', function(event
   .catch(error => console.error('Error logging out:', error));
 });
 
+document.getElementById('gateCode-link').addEventListener('click', async function (event) {
+  event.preventDefault(); // Prevent the default anchor behavior
+  closeSidebar(); // Close the sidebar after clicking
+
+  try {
+    // Get the logged-in user's username
+    const loggedInUser = sessionStorage.getItem('user'); // Replace with your actual method to get the logged-in user's key
+    if (!loggedInUser) {
+      alert("No logged-in user found.");
+      return;
+    }
+
+    // Fetch user data from the server
+    const response = await fetch(`/api/get-user/${loggedInUser}`);
+    if (!response.ok) {
+      throw new Error(`Error fetching user data: ${response.statusText}`);
+    }
+
+    const userData = await response.json();
+
+    // Populate the existing popup with user data
+    document.getElementById('userUsername').value = userData.username || '';
+    document.getElementById('editPasswordUser').value = userData.password || '';
+    document.getElementById('editGateCodeUser').value = userData.gateCode || '';
+    document.getElementById('userRoomAccess').value = userData.location || '';
+    document.getElementById('editPermissionsUser').value = userData.permissions || 'default';
+
+    // Show the popup
+    document.getElementById('userOverlayPopUp').style.display = 'block';
+    document.getElementById('userPopUp').style.display = 'block';
+  } catch (error) {
+    console.error("Error:", error);
+    alert("An error occurred while fetching user data.");
+  }
+});
+
+
+// Add event listener for the save button
+async function saveUserChanges() {
+  // Get user inputs
+  const usernameInput = document.getElementById('userUsername');
+  if (!usernameInput || !usernameInput.value) {
+    alert("User information is missing.");
+    return;
+  }
+
+  const updatedData = {
+    username: usernameInput.value, // Ensure this is correctly populated
+    password: document.getElementById('editPasswordUser').value,
+  };
+
+  try {
+    // Make API call to update the user
+    const response = await fetch(`/api/update-user/${updatedData.username}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedData),
+    });
+
+    if (response.ok) {
+      // Success message
+      document.getElementById('successMessageUser').style.display = 'block';
+      document.getElementById('successTextUser').innerText = 'User updated successfully!';
+      setTimeout(closeEditPopup,2000);
+    } else {
+      // Handle API errors
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to update user.');
+    }
+  } catch (error) {
+    // Display error message
+    const errorElement = document.getElementById('errorMessagePopUpUser');
+    const errorTextElement = document.getElementById('errorTextPopUpUser');
+    
+    if (errorElement && errorTextElement) {
+      errorElement.style.display = 'block';
+      errorTextElement.innerText = error.message;
+    } else {
+      console.error("Error displaying error message:", error);
+    }
+  }
+}
+
+
+
 function showDashboard() {
     // Show the dashboard section and hide the admin section
     document.getElementById("dashboard").style.display = "block";
     document.getElementById("adminSection").style.display = "none";
+    document.getElementById("userPopUp").style.display = "none";
     closeSidebar(); // Close the sidebar after clicking
 }
 
@@ -203,6 +462,7 @@ function showAdmin() {
     // Show the admin section and hide the dashboard section
     document.getElementById("dashboard").style.display = "none";
     document.getElementById("adminSection").style.display = "block";
+    document.getElementById("userPopUp").style.display = "none";
     closeSidebar(); // Close the sidebar after clicking
 }
 
@@ -253,10 +513,11 @@ function showPassword(passwordText) {
 }
 
 
-function openEditPopup(username, password, permissions) {
+function openEditPopup(username, password, location, permissions) {
   // Populate the form fields
   document.getElementById("editUsername").value = username;
   document.getElementById("editPassword").value = password;
+  document.getElementById("editRoomAccess").value = location;
   document.getElementById("editPermissions").value = permissions;
 
   // Display the popup
@@ -273,6 +534,14 @@ function closeEditPopup() {
   document.getElementById("errorMessage").style.display = "none";
   document.getElementById("editPassword").type = "password";
   document.getElementById("showEditPassword").checked = false;
+  document.getElementById('userOverlayPopUp').style.display = 'none';
+  document.getElementById('userPopUp').style.display = 'none';
+  document.getElementById('successMessageUser').style.display = 'none';
+  document.getElementById('errorMessagePopUpUser').style.display = 'none';
+  document.getElementById("editPasswordUser").type = "password";
+  document.getElementById("showEditPasswordUser").checked = false;
+  document.getElementById("editGateCodeUser").type = "password";
+  document.getElementById("showGateCode").checked = false;
 }
 
 function updateUserTableData() {
@@ -311,6 +580,28 @@ function updateUserTableData() {
         passwordCell.appendChild(showPasswordCheckbox);
         row.appendChild(passwordCell);
 
+        const codeKeyCell = document.createElement("td");
+        codeKeyCell.id = "roomKey";
+        const codeKeyText = document.createElement("span");
+        codeKeyText.className = "password-text";
+        codeKeyText.style.webkitTextSecurity = "disc";
+        codeKeyText.textContent = rowData.gateCode;
+        
+        const showGateCodeCheckbox = document.createElement("input");
+        showGateCodeCheckbox.type = "checkbox";
+        showGateCodeCheckbox.className = "show-password-checkbox";
+        showGateCodeCheckbox.onclick = function () {
+          showPassword(codeKeyText);
+        };
+        
+        codeKeyCell.appendChild(codeKeyText);
+        codeKeyCell.appendChild(showGateCodeCheckbox);
+        row.appendChild(codeKeyCell);
+
+        const locationCell = document.createElement("td");
+        locationCell.textContent = rowData.location;
+        row.appendChild(locationCell);
+
         const permissionsCell = document.createElement("td");
         permissionsCell.textContent = rowData.permissions;
         row.appendChild(permissionsCell);
@@ -320,7 +611,7 @@ function updateUserTableData() {
         editLink.className = "editpsw";
         editLink.textContent = "Edit";
         editLink.onclick = function () {
-          openEditPopup(rowData.username, rowData.password, rowData.permissions);
+          openEditPopup(rowData.username, rowData.password, rowData.location, rowData.permissions);
         };
         editCell.appendChild(editLink);
         row.appendChild(editCell);
@@ -331,11 +622,6 @@ function updateUserTableData() {
     .catch(error => console.error('Error updating table data:', error));
 }
 
-source.addEventListener('table_update', function(e) {
-  console.log("table_update event received:", e.data);
-  updateUserTableData(); // Fetch and display new table data
-}, false);
-
 
 function delay(time) {
   return new Promise(resolve => setTimeout(resolve, time));
@@ -344,6 +630,7 @@ function delay(time) {
 function saveChanges() {
   const username = document.getElementById("editUsername").value;
   const newPassword = document.getElementById("editPassword").value;
+  const newRoomAccess = document.getElementById("editRoomAccess").value;
   const newPermissions = document.getElementById("editPermissions").value;
 
   console.log('Updating user with data:', { username, newPassword, newPermissions });
@@ -354,6 +641,7 @@ function saveChanges() {
     body: JSON.stringify({
       username: username,
       password: newPassword,
+      location: newRoomAccess,
       permissions: newPermissions,
     }),
   })
@@ -400,6 +688,9 @@ function addUser() {
   const username = document.getElementById("uname").value;
   const newPassword = document.getElementById("psw").value;
   const newPermissions = document.getElementById("permissions").value;
+  const newRooms = document.getElementById("roomAccess").value;
+
+
 
   console.log('Attempting to add user:', { username, newPassword, newPermissions });
 
@@ -409,6 +700,7 @@ function addUser() {
     body: JSON.stringify({
       username,
       password: newPassword,
+      location: newRooms,
       permissions: newPermissions,
     }),
   })
@@ -423,8 +715,12 @@ function addUser() {
         .then(() => closeEditPopup())
         .catch(error => console.error('Error updating table or closing popup:', error));
       } else {
+        document.getElementById("errorMessage").style.display = "block";
         document.getElementById("errorText").innerText = data.message || 'Failed to add user.';
         document.getElementById("errorText").style.color = 'red';
+        delay(1000)
+        .then(()=>document.getElementById("errorMessage").style.display = "none")
+        .catch(error => console.error('Error updating table or closing popup:', error));
       }
     })
     .catch((error) => {
@@ -433,9 +729,82 @@ function addUser() {
       document.getElementById("errorText").style.color = 'red';
     });
 }
+function deviceConfig(){
+  
+  const devID = document.getElementById("dname").value;
+  const newLocation = document.getElementById("devLocation").value;
+  const newGateType = document.getElementById("gateType").value;
+  let newBuilding;
+  if(document.getElementById("devBuildingInput").style.display == "none"){
+    newBuilding = newLocation;
+  }
+  else{
+    newBuilding = document.getElementById("devBuilding").value;
+  }
+  console.log('Attempting to configure gate device:', { devID, location, gateType });
 
+  fetch('/api/devConfig', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      devID,
+      location: newLocation,
+      gateType: newGateType,
+      building: newBuilding,
+    }),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        document.getElementById("errorMessageDevice").style.display = "block";
+        document.getElementById("errorTextDevice").innerText = 'User added successfully';
+        document.getElementById("errorTextDevice").style.color = 'green';
+        delay(1000)
+        .then(() => document.getElementById("errorMessageDevice").style.display = "none")
+        .then(() => document.getElementById("errorTextDevice").innerText = '')
+        .catch(error => console.error('Error updating table or closing popup:', error));
+      } else {
+        document.getElementById("errorMessageDevice").style.display = "block";
+        document.getElementById("errorTextDevice").innerText = data.message || 'Failed to add user.';
+        document.getElementById("errorTextDevice").style.color = 'red';
+        delay(1000)
+        .then(()=>document.getElementById("errorMessageDevice").style.display = "none")
+        .catch(error => console.error('Error closing popup:', error));
+      }
+    })
+    .catch((error) => {
+      console.error('Error:', error);
+      document.getElementById("errorTextDevice").innerText = 'An error occurred. Please try again.';
+      document.getElementById("errorTextDevice").style.color = 'red';
+    });
 
+}
 
+// Function to toggle visibility of devBuildingInput based on gateType selection
+document.getElementById("gateType").addEventListener("change", function () {
+  const gateType = this.value; // Get the selected value
+  const devBuildingInput = document.getElementById("devBuildingInput");
+
+  if (gateType === "room") {
+      // Show the devBuildingInput container for room
+      devBuildingInput.style.display = "block";
+  } else if (gateType === "entrance") {
+      // Hide the devBuildingInput container for entrance
+      devBuildingInput.style.display = "none";
+  }
+});
+
+// Set initial state based on the default selection
+document.addEventListener("DOMContentLoaded", function () {
+  const gateType = document.getElementById("gateType").value;
+  const devBuildingInput = document.getElementById("devBuildingInput");
+
+  if (gateType === "room") {
+      devBuildingInput.style.display = "block";
+  } else {
+      devBuildingInput.style.display = "none";
+  }
+});
 
 
 if (!!window.EventSource) {
@@ -455,10 +824,4 @@ if (!!window.EventSource) {
     console.log("message", e.data);
   }, false);
 
-  source.addEventListener('new_readings', function(e) {
-    console.log("new_readings", e.data);
-    var myObj = JSON.parse(e.data);
-    console.log(myObj);
-    plotTemperature(myObj);
-  }, false);
 }

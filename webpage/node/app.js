@@ -46,6 +46,7 @@ const updateUserRoute = require('./routes/updateUser');
 const { router: getTableDataRoute } = require('./routes/getTableData');
 const addUserRoute = require('./routes/addUser'); // Adjust path as needed
 const mqttClient = require('./mqttclient'); // Import the MQTT client
+const devConfigRoute = require('./routes/devConfig'); // Adjust path as needed
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -53,6 +54,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api', updateUserRoute);
 app.use('/api', getTableDataRoute); // Register the route for get-table-data
 app.use('/api', addUserRoute);
+app.use('/api', devConfigRoute);
 
 // Set EJS as the view engine
 app.set('view engine', 'ejs');
@@ -96,6 +98,7 @@ app.post('/login', async (req, res) => {
           <head>
             <script>
               sessionStorage.setItem('isLoggedIn', 'true');
+              sessionStorage.setItem('user','${username}');
               window.location.href = '/indexTutorial.html';
             </script>
           </head>
@@ -112,6 +115,26 @@ app.post('/login', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+
+app.post('/api/update-user/:username', async (req, res) => {
+  const { username } = req.params;
+  const { password } = req.body;
+
+  console.log("Updating user:", username);
+  console.log("Request body:", req.body);
+
+  if (!username || !password) {
+    return res.status(400).json({ message: 'Invalid data provided.' });
+  }
+  try {
+    await admin.database().ref(`users/${username}`).update({ password });
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Error updating password:', error);
+    res.status(500).json({ message: 'Failed to update password' });
+  }
+});
+
 
 // Handle logout
 app.post('/logout', (req, res) => {

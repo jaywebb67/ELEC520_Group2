@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>ESP IOT DASHBOARD</title>
+        <title>ELEC520 Security Dashboard</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="icon" type="image/png" href="favicon.png">
         <link rel="stylesheet" type="text/css" href="style.css">
@@ -48,7 +48,7 @@
                                     <tr>
                                         <th>User ID</th>
                                         <th>Access Time</th>
-                                        <th>Gate ID</th>
+                                        <th>Building/Room</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -57,7 +57,7 @@
                                             <tr>
                                                 <td><%= entry.user %></td>
                                                 <td><%= entry.timeAccessed %></td>
-                                                <td><%= entry.gateID %></td>
+                                                <td><%= entry.location %></td>
                                             </tr>
                                         <% }) %>
                                     <% } else { %>
@@ -97,8 +97,6 @@
                     </div>
                 </div>
             </section>
-            
-
             <section id="adminSection">
                 <div class="content">
                     <div class="card-grid">
@@ -110,6 +108,8 @@
                                         <tr>
                                             <th>User</th>
                                             <th>Password</th>
+                                            <th>Room Code</th>
+                                            <th>Room's Available</th>
                                             <th>Permissions</th>
                                             <th>Edit user</th>
                                         </tr>
@@ -122,18 +122,22 @@
                                                     <td id="userPassword">
                                                         <span class="password-text" style="-webkit-text-security: disc;"><%= entry.password %></span>
                                                         <input type="checkbox" onclick="showPassword(this.previousElementSibling)" class="show-password-checkbox">
-                                                    </td>                                                    
+                                                    </td>
+                                                    <td id="roomKey">
+                                                        <span class="password-text" style="-webkit-text-security: disc;"><%= entry.gateCode %></span>
+                                                        <input type="checkbox" onclick="showPassword(this.previousElementSibling)" class="show-password-checkbox">
+                                                    </td>
+                                                    <td><%= entry.location %></td>
                                                     <td><%= entry.permissions %></td>
                                                     <td>
-                                                        <a onclick="openEditPopup('<%= entry.username %>', '<%= entry.password %>', '<%= entry.permissions %>')"class="editpsw">Edit</a>
+                                                        <a onclick="openEditPopup('<%= entry.username %>', '<%= entry.password %>', '<%= entry.location %>','<%= entry.permissions %>')"class="editpsw">Edit</a>
                                                     </td>
                                                 </tr>
                                             <% }) %>
                                         <% } else { %>
-                                            <tr><td colspan="4">No user access data available</td></tr>
+                                            <tr><td colspan="6">No user access data available</td></tr>
                                         <% } %>
-                                    </tbody>
-                                    
+                                    </tbody>    
                                 </table>
                             </div>
                         </div>
@@ -159,7 +163,11 @@
                                             />
                                         </div>
                                     </div>
-                                
+                                    <div class="input-container">
+                                        <label for="roomAccess">Accessible Rooms</label>
+                                        <input type="text" name="room_access" placeholder="Enter rooms/locations" id="roomAccess" required>
+                                    </div>
+
                                     <div class="input-container">
                                     <label for="permissions">Permissions</label>
                                     <select id="permissions" name="permissions" required>
@@ -176,6 +184,42 @@
                             </div>                                
                         </div>
                     </div>
+                </div>
+
+                <div class = "form-container">
+                    <div class="deviceForm">
+                        <p class="card-title">Device Config</p>
+                        <div id="deviceConfig">
+                            <form id="deviceConfigForm" onsubmit="event.preventDefault(); deviceConfig();">
+                                <div class="input-container">
+                                <label for="devName">Device ID</label>
+                                <input type="text" name="devName" placeholder="Enter device name" id="dname" required>
+                                </div>
+                                <div class="input-container">
+                                    <label for="devLocation">Device Location</label>
+                                    <input type="text" name="devLocation" placeholder="Enter room/location" id="devLocation" required>
+                                </div>
+
+                                <div class="input-container" id="devBuildingInput">
+                                    <label for="devBuilding">Device Building</label>
+                                    <input type="text" name="devBuilding" placeholder="Enter device's building" id="devBuilding" required>
+                                </div>
+
+                                <div class="input-container">
+                                <label for="gateType">Gate Type</label>
+                                <select id="gateType" name="gateType" required>
+                                    <option value="entrance">Entrance (To building)</option>
+                                    <option value="room">Room (Access specific room)</option>
+                                </select>
+                                </div>    
+                                <div id="errorMessageDevice">
+                                    <p id="errorTextDevice"></p>
+                                </div>                       
+                                <button type="button" class="submit" onclick="deviceConfig()">Submit</button>
+ 
+                            </form>
+                        </div>
+                    </div>                                
                 </div>
                 <div id="overlayPopUp" onclick="closeEditPopup()"></div>
                 <div id="editUserPopup" class="popup-form">
@@ -206,6 +250,10 @@
                             </div>
                         </div>
                         
+                        <div class="input-container">
+                            <label for="editRoomAccess">Available rooms</label>
+                            <input type="text" id="editRoomAccess">
+                        </div>
                         
                         <div class="input-container">
                             <label for="editPermissions">Permissions</label>
@@ -227,12 +275,82 @@
                 
             </section>
 
+            <div id="userOverlayPopUp" onclick="closeEditPopup()"></div>
+            <div id="userPopUp" class="popup-form">
+                <form id="userForm" method="POST">
+                    <h2>Personal Info</h2>
+                    
+                    <div class="input-container">
+                        <label for="userUsername">Username</label>
+                        <input type="text" id="userUsername" name="username" readonly>
+                    </div>
+                    <div class="input-container">
+                        <label for="userPassword">Password</label>
+                        <div id="userPassword" style="display: flex; align-items: center;">
+                            <input
+                                type="password" 
+                                id="editPasswordUser"
+                                name="password"
+                                style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px;"
+                                required
+                            />
+                            <input
+                                id="showEditPasswordUser"
+                                type="checkbox"
+                                onclick="showPassword(this.previousElementSibling)"
+                                class="show-password-checkbox"
+                                style="margin-left: 8px;"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="input-container">
+                        <label for="gateCodeUser">Password</label>
+                        <div id="gateCodeUser" style="display: flex; align-items: center;">
+                            <input
+                                type="password" 
+                                id="editGateCodeUser"
+                                name="password"
+                                style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px;"
+                                readonly
+                            />
+                            <input
+                                id="showGateCode"
+                                type="checkbox"
+                                onclick="showPassword(this.previousElementSibling)"
+                                class="show-password-checkbox"
+                                style="margin-left: 8px;"
+                            />
+                        </div>
+                    </div>
+                    
+                    <div class="input-container">
+                        <label for="userRoomAccess">Available rooms</label>
+                        <input type="text" id="userRoomAccess" readonly>
+                    </div>
+                    
+                    <div class="input-container">
+                        <label for="editPermissionsUser">Permissions</label>
+                        <input type="text" id="editPermissionsUser" name="permissions" readonly>
+                    </div>
+                    <div id="successMessageUser" style="display: none;">
+                        <p id="successTextUser"></p>
+                    </div>
+                    <div id="errorMessagePopUpUser" style="display: none;">
+                        <p id="errorTextPopUpUser"></p>
+                    </div>
+                    <button type="button" onclick="saveUserChanges()">Save Changes</button>
+                    <button type="button" onclick="closeEditPopup()">Cancel</button>
+                </form>
+            </div>
+
         
         </main>
         <!-- Sidebar Menu -->
         <div id="mySidebar" class="sidebar">
             <a id="dashboard-link" onclick="showDashboard()">Dashboard</a>
             <a id="admin-link" onclick="showAdmin()">Admin</a>
+            <a id="gateCode-link">Show Gate Code</a>
             <a id="logoutButton">Log Out</a>
         </div>
 

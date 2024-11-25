@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const admin = require('firebase-admin'); // Firebase Admin SDK should be initialized
+const events = require('events');
+const eventEmitter = new events.EventEmitter();
+
 
 // Function to get all users from Firebase
 const getAllUsers = async () => {
@@ -13,6 +16,7 @@ const getAllUsers = async () => {
       users.push({
         username: childSnapshot.key, // Assuming the username is the key
         password: user.password,    // Adjust according to your database structure
+        location: user.location
       });
     });
 
@@ -60,7 +64,7 @@ router.get('/get-table-data', async (req, res) => {
 
     snapshot.forEach((childSnapshot) => {
       const entry = childSnapshot.val();
-      entry.username = childSnapshot.key; // Add username/key as part of the data if needed
+      entry.username = childSnapshot.key; // Add username/key as part of the data if needed 
       data.push(entry);
     });
 
@@ -72,5 +76,237 @@ router.get('/get-table-data', async (req, res) => {
   }
 });
 
+// SSE endpoint to send updates to the client
+router.get('/userAccess-updates', (req, res) => {
+  // Set headers for SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  console.log('Client connected for userAccess updates');
+
+  // Function to send data to the client
+  const sendUpdate = (data) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    console.log(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  // Listen to Firebase database changes
+  const userAccessRef = admin.database().ref('userAccess');
+  const handleDatabaseChange = (snapshot) => {
+    const data = [];
+    snapshot.forEach((childSnapshot) => {
+      const entry = childSnapshot.val();
+      data.push(entry);
+    });
+    sendUpdate(data); // Send updated data to the client
+  };
+
+  // Attach the listener
+  userAccessRef.on('value', handleDatabaseChange);
+
+  // Handle client disconnect
+  req.on('close', () => {
+    console.log('Client disconnected from updates');
+    userAccessRef.off('value', handleDatabaseChange); // Remove the database listener
+    res.end();
+  });
+});
+
+router.get('/get-userAccess-data', async (req, res) => {
+  try {
+    const snapshot = await admin.database().ref('userAccess').once('value');
+    const data = [];
+
+    snapshot.forEach((childSnapshot) => {
+      const entry = childSnapshot.val();
+      data.push(entry);
+    });
+
+    res.json(data); // Return the data as JSON
+  } catch (error) {
+    console.error('Error fetching userAccess data:', error);
+    res.status(500).json({ message: 'Failed to fetch userAccess data' });
+  }
+});
+
+// SSE endpoint to send updates to the client
+router.get('/deviceStatus-updates', (req, res) => {
+  // Set headers for SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  console.log('Client connected for deviceStatus updates');
+
+  // Function to send data to the client
+  const sendUpdate = (data) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    console.log(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  // Listen to Firebase database changes
+  const deviceStatusRef = admin.database().ref('deviceStatus');
+  const handleDatabaseChange = (snapshot) => {
+    const data = [];
+    snapshot.forEach((childSnapshot) => {
+      const entry = childSnapshot.val();
+      data.push(entry);
+    });
+    sendUpdate(data); // Send updated data to the client
+  };
+
+  // Attach the listener
+  deviceStatusRef.on('value', handleDatabaseChange);
+
+  // Handle client disconnect
+  req.on('close', () => {
+    console.log('Client disconnected from updates');
+    deviceStatusRef.off('value', handleDatabaseChange); // Remove the database listener
+    res.end();
+  });
+});
+
+router.get('/get-deviceStatus-data', async (req, res) => {
+  try {
+    const snapshot = await admin.database().ref('deviceStatus').once('value');
+    const data = [];
+
+    snapshot.forEach((childSnapshot) => {
+      const entry = childSnapshot.val();
+      data.push(entry);
+    });
+
+    res.json(data); // Return the data as JSON
+  } catch (error) {
+    console.error('Error fetching deviceStatus data:', error);
+    res.status(500).json({ message: 'Failed to fetch deviceStatus data' });
+  }
+});
+
+router.get('/get-user/:username', async (req, res) => {
+  const { username } = req.params;
+
+  try {
+    const snapshot = await admin.database().ref(`users/${username}`).once('value');
+    if (!snapshot.exists()) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const userData = snapshot.val();
+    res.json({ username, ...userData });
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    res.status(500).json({ message: 'Failed to fetch user data' });
+  }
+});
+
+async function getLocation(gateID) {
+  try {
+      // Reference the 'devices/Gate' path in the database
+      const gatesRef = admin.database().ref('devices/Gate');
+      const snapshot = await gatesRef.once('value');
+
+      if (snapshot.exists()) {
+          const gates = snapshot.val();
+
+          // Find the gate with the matching gateID
+          const gate = gates.find(g => g.deviceID === gateID);
+
+          if (gate && gate.location) {
+              return gate.location; // Return the location if found
+          }
+      }
+
+      console.warn(`Device with gateID=${gateID} not found.`);
+      return null;
+  } catch (error) {
+      console.error('Error fetching location:', error);
+      throw error;
+  }
+}
+
+async function getGateType(gateID) {
+  try {
+      // Reference the 'devices/Gate' path in the database
+      const gatesRef = admin.database().ref('devices/Gate');
+      const snapshot = await gatesRef.once('value');
+
+      if (snapshot.exists()) {
+          const gates = snapshot.val();
+
+          // Find the gate with the matching gateID
+          const gate = gates.find(g => g.deviceID === gateID);
+
+          if (gate && gate.gateType) {
+              return gate.gateType; // Return the location if found
+          }
+      }
+
+      console.warn(`Device with gateID=${gateID} not found.`);
+      return null;
+  } catch (error) {
+      console.error('Error fetching gate type:', error);
+      throw error;
+  }
+}
+
+async function getBuilding(gateID) {
+  try {
+      // Reference the 'devices/Gate' path in the database
+      const gatesRef = admin.database().ref('devices/Gate');
+      const snapshot = await gatesRef.once('value');
+
+      if (snapshot.exists()) {
+          const gates = snapshot.val();
+
+          // Find the gate with the matching gateID
+          const gate = gates.find(g => g.deviceID === gateID);
+
+          if (gate && gate.building) {
+            console.log(`Building = ${gate.building}`);
+            return gate.building; // Return the location if found
+          }
+      }
+
+      console.warn(`Device with gateID=${gateID} not found.`);
+      return null;
+  } catch (error) {
+      console.error('Error fetching building:', error);
+      throw error;
+  }
+}
+
+
+async function getDeviceIDsByLocation(location) {
+  try {
+    if (!location) {
+      console.error('Invalid location:', location);
+      return null;
+    }
+  
+    const ref = admin.database().ref('devices');
+    const snapshot = await ref.once('value');
+    const devices = snapshot.val();
+    
+    const deviceIDs = [];
+
+    for (const category of Object.keys(devices)) {
+      const deviceArray = devices[category];
+      for (const device of deviceArray) {
+        if (device.location === location) {
+          console.log(`Found deviceID for location ${device.deviceID}: ${location}`);
+          deviceIDs.push(device.deviceID);
+        }
+      }
+    }
+    return deviceIDs;
+  } catch (error) {
+      console.error('Error fetching deviceIDs from location:', error);
+      throw error;
+  }
+}
+
+
 // Export both the router and the getAllUsers function
-module.exports = { router, getAllUsers, getDeviceID };
+module.exports = { router, getAllUsers, getDeviceID, getLocation, getGateType,getBuilding,getDeviceIDsByLocation };

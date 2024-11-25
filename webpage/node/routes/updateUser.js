@@ -24,16 +24,17 @@ function updateUserInFirebase(username, password, permissions) {
 
 // Route to update user information
 router.post('/update-user', async (req, res) => {
-  const { username, password, permissions } = req.body;
-  console.log('Received data to update user:', { username, password, permissions }); // Corrected log
+  const { username, password, location, permissions } = req.body;
+  console.log('Received data to update user:', { username, password, location, permissions }); // Corrected log
 
-  if (!username || !password || !permissions) {
+  if (!username || !password || !permissions || !location) {
     return res.status(400).json({ success: false, message: 'All fields are required.' });
   }
 
   try {
     await admin.database().ref(`users/${username}`).update({
       password,
+      location,
       permissions,
     })
     .then(() => {
