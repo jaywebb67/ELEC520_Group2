@@ -3,6 +3,7 @@
 #include <LiquidCrystal_I2C.h>
 #include "Char_Buffer.h"
 #include "Communication_Protocol.h"
+#include "LCD_Manager.h"
 //#include "Gate_Function.h"
 #include "esp_system.h"
 #include "driver/uart.h"
@@ -11,11 +12,6 @@
 #define DEVICE_NAME "Gate 1"
 
 BluetoothSerial SerialBT;
-
-QueueHandle_t LCD_Queue;
-
-//create LCD object
-LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 //const uint8_t Home_Node_Type = 0x35;
 uint8_t Home_Address = 0x13;
@@ -27,95 +23,43 @@ CharBuffer Current_Codes_In_Use(100, 6);
 //ESP32 WROOM pins
 const int rowPins[4] = {18, 19, 13, 32};     // Row pins connected to the keypad
 const int colPins[4] = {23, 25, 26, 27};     // Column pins connected to the keypad
+
 char Input_Key_Code[7];
 char BT_Key_Code[7];
 char Start_Pass[7] = {"012345"};
 // volatile unsigned char buffer[MESSAGE_LENGTH];
 // volatile unsigned char bufferIndex = 0;
 volatile uint32_t bytes_Received = 0;
-unsigned long debounceDelay = 200;        // Debounce time in milliseconds
-volatile int keypresses = 0;
-
+unsigned long debounceDelay = 250;        // Debounce time in milliseconds
+volatile uint8_t Valid_Input_Presses = 0;
 volatile unsigned long lastInterruptTime = 0;
 volatile bool isPressed = false;
-
-typedef void (*FunctionPointer)(void);
-
-typedef struct {
-  FunctionPointer func;
-} QueueItem;
-
-
 
 // Define task handles
 TaskHandle_t Keypad_Reader = NULL;
 TaskHandle_t Bluetooth_Task_Handle = NULL; // Task handle for Bluetooth task
 TaskHandle_t LCD_Thread_Handle;
+//TaskHandle_t RX_Message_Handle;
+
+// Timer handle 
+TimerHandle_t Keypad_Timeout_Timer;
 
 
-void Enter_Mess() {
-  lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("   Enter Key:   ");
-}
-
-void Access_G() {
-  lcd.setCursor(0,0);
-  lcd.print("     Access     ");
-  lcd.setCursor(0,1);
-  lcd.print("     Granted    ");
-}
-
-void Access_D() {
-  lcd.setCursor(0,0);
-  lcd.print("     Access     ");
-  lcd.setCursor(0,1);
-  lcd.print("     Denied     ");
-}
-
-void Bye() {
-  lcd.setCursor(0,0);
-  lcd.print("     So Long    ");
-  lcd.setCursor(0,1);
-  lcd.print("    Farewell    ");
-}
-
-void Invalid_Mess(){
-  lcd.setCursor(0,0);
-  lcd.print("    Invalid     ");
-  lcd.setCursor(0,1);
-  lcd.print("     Input      ");
-}
-
-void Broken(){
-  lcd.setCursor(0,0);
-  lcd.print("    I Need A    ");
-  lcd.setCursor(0,1);
-  lcd.print("    COFFEE      ");
-}
-
-
-
-void Send_To_LCD_Queue(FunctionPointer func) {
-  QueueItem item = {func};
-  if (xQueueSend(LCD_Queue, &item, portMAX_DELAY) != pdPASS) {
-    Serial.println("Failed to send to queue.");
-  }
+// Timer callback function 
+void TimeoutCallback(TimerHandle_t xTimer) { 
+  Serial.println("Timeout occurred. Resetting Valid_Input_Presses."); 
+  Valid_Input_Presses = 0; 
+  Send_To_LCD_Queue(T_Out);
+  Send_To_LCD_Queue(Enter_Mess);
 }
 
 void IRAM_ATTR Key_Pressed_ISR() {
-  unsigned long interruptTime = millis();
-  // Debounce logic
-  if ((interruptTime - lastInterruptTime > debounceDelay) && !isPressed) {
-    isPressed = true;
-    keypresses++;
+  if(!isPressed) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     vTaskNotifyGiveFromISR(Keypad_Reader, &xHigherPriorityTaskWoken);
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
   }
-  lastInterruptTime = interruptTime;
 }
-
 
 void onBluetoothDataReceived(const uint8_t *data, size_t len) {
   Serial.print("Received data length: ");
@@ -138,8 +82,8 @@ void onBluetoothDataReceived(const uint8_t *data, size_t len) {
 
   // Check if total characters received, including control characters, exceed 6
   if (validBytesReceived != 6) {
-    Serial.println("Invalid Code - More than 6 characters received");
-    SerialBT.println("Invalid Code - More than 6 characters received");
+    Serial.println("Invalid Code");
+    SerialBT.println("Invalid Code");
   } else {
     // Notify the Bluetooth task
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -216,11 +160,15 @@ int Test_Entry_Code(const char* code){
   }
 }
 
- //const int colPins[4] = {25, 23, 32, 35};     // Column pins connected to the keypad
+
 // Task 1 function 
 void Keypad_Read(void *pvParameters) {
-  bool keyPressed = false;
-  uint8_t Valid_Input_Presses = 0;
+  
+  
+  unsigned long Start_Time;
+
+  // Create the timeout timer (10 seconds) 
+  Keypad_Timeout_Timer = xTimerCreate("TimeoutTimer", pdMS_TO_TICKS(10000), pdFALSE, 0, TimeoutCallback);
 
   // Keypad layout (row-major order)
   char keypad[4][4] = {
@@ -235,16 +183,17 @@ void Keypad_Read(void *pvParameters) {
 
   while (true) {
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY); //wait for flag
-    // Code for task 1
+
+    isPressed = true;
+    vTaskDelay(pdMS_TO_TICKS(debounceDelay));
+   
     Serial.println("Entering task 1.");
    
     for (int i = 0; i < 4; i++) {
-      //detachInterrupt(digitalPinToInterrupt(colPins[i]));  // Disable interrupts on all columns
+      //set row pins high to enable reading
       digitalWrite(rowPins[i], HIGH); // Reset rows to HIGH (idle state)
     }
    
-    //vTaskDelay(pdMS_TO_TICKS(debounceDelay)); // Sleep for 50ms to debounce switch
-     //Serial.println("Interrups should be disabled.");
     // Scan for key press in all rows and columns
     int pressedCount = 0;
     int foundRow = -1;
@@ -273,6 +222,9 @@ void Keypad_Read(void *pvParameters) {
     else if (pressedCount == 1) 
     { char key = keypad[foundRow][foundCol]; // Set the key 
     Input_Key_Code[Valid_Input_Presses] = key; 
+    if(Valid_Input_Presses == 0){
+      xTimerStart(Keypad_Timeout_Timer, 0);
+    }
     Valid_Input_Presses++; 
     Serial.print("Key pressed: "); 
     Serial.println(key);
@@ -284,14 +236,11 @@ void Keypad_Read(void *pvParameters) {
         Serial.println(y);
         Serial.println(Input_Key_Code);
         Valid_Input_Presses = 0;
-        //display foe 2 seconds
-        vTaskDelay(pdMS_TO_TICKS(2000));
+        xTimerStop(Keypad_Timeout_Timer, 0);
         Send_To_LCD_Queue(Enter_Mess);
       }
-      // Reset key press flag and update debounce time
-      keyPressed = false;
     }
-    // Reattach interrupts after debounce delay to avoid immediate retriggering
+    // Reset row pins to low to reenable the interrupt
     for (int i = 0; i < 4; i++) {
       //attachInterrupt(digitalPinToInterrupt(colPins[i]), Key_Pressed_ISR, FALLING);
       digitalWrite(rowPins[i], LOW); // Reset rows to LOW for interrupt to work
@@ -303,93 +252,6 @@ void Keypad_Read(void *pvParameters) {
   }
 }
 
-
-// // Task 2 function 
-// void Process_BT_Message(void *pvParameters) {
-//   uint32_t bytes_Received = 0;
-//   while (true) {
-//     // Wait for the notification from ISR 
-//     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-//     Serial.println("BT task entered");
-//     while (SerialBT.available() && bytes_Received < 6) {
-//       char incomingByte = SerialBT.read();
-//       BT_Key_Code[bytes_Received] = incomingByte;
-//       Serial.print("Received: ");
-//       Serial.println(incomingByte);
-//       bytes_Received++;
-//     }
-
-//     // Check if more than 6 bytes are received
-//     if (bytes_Received > 6 || SerialBT.available()) {
-//       Serial.println("Invalid Code_1");
-//       SerialBT.println("Invalid Code_1");
-//       bytes_Received = 0; // Reset bytes_Received
-//       // Send to LCD or turn on a red LED to indicate the error
-//       while (SerialBT.available()) { // Clear the buffer
-//         SerialBT.read();
-//       }
-//     } else if (bytes_Received != 6) {
-//       Serial.println("Invalid Code_2");
-//       SerialBT.println("Invalid Code_2");
-//       SerialBT.println(bytes_Received);
-//       bytes_Received = 0; // Reset bytes_Received
-//       // Send to LCD or turn on a red LED to indicate the error
-//     } 
-//     else {
-//       // Process the valid 6-byte code
-//       int y = Test_Entry_Code(Input_Key_Code);
-//       //notify_User(1, y);
-//       bytes_Received = 0; // Reset bytes_Received for the next code
-//     }
-//   }
-// }
-// void Process_BT_Message(void *pvParameters) {
-//   // uint32_t bytes_Received = 0;
-//   while (true) {
-//     // Wait for the notification from ISR
-//     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-//     //Serial.println("BT task entered");
-
-//     bytes_Received = 0; // Ensure bytes_Received is reset each time task is entered
-
-//     // Small delay to give the buffer time to fill
-//     //vTaskDelay(pdMS_TO_TICKS(50)); 
-
-//     while (SerialBT.available() && bytes_Received < 6) {
-//       char incomingByte = SerialBT.read();
-//       BT_Key_Code[bytes_Received] = incomingByte;
-//       Serial.print("Received: ");
-//       Serial.println(incomingByte);
-//       bytes_Received++;
-//     }
-
-//     // Debug statement to show bytes received
-//     Serial.print("Bytes received: ");
-//     Serial.println(bytes_Received);
-
-//     // Check if more than 6 bytes are received
-//     if (bytes_Received > 6 || SerialBT.available()) {
-//       Serial.println("Invalid Code_1");
-//       SerialBT.println("Invalid Code_1");
-//       bytes_Received = 0; // Reset bytes_Received
-//       // Send to LCD or turn on a red LED to indicate the error
-//       while (SerialBT.available()) { // Clear the buffer
-//         SerialBT.read();
-//       }
-//     } else if (bytes_Received != 6) {
-//       Serial.println("Invalid Code_2");
-//       SerialBT.println("Invalid Code_2");
-//       SerialBT.println(bytes_Received);
-//       bytes_Received = 0; // Reset bytes_Received
-//       // Send to LCD or turn on a red LED to indicate the error
-//     } else {
-//       // Process the valid 6-byte code
-//       int y = Test_Entry_Code(BT_Key_Code);
-//       // notify_User(1, y);
-//       bytes_Received = 0; // Reset bytes_Received for the next code
-//     }
-//   }
-// }
 
 void Process_BT_Message(void *pvParameters) {
   while (true) {
@@ -434,16 +296,13 @@ void setup() {
  // Start Serial communication
   Serial.begin(9600);
   //call function to set up correct communication pins and serial port for the board in use
-  //Comms_Set_Up();
+  Comms_Set_Up();
   Serial.println("Hello");
-  //LCD setup
-  lcd.init();
-  lcd.setBacklight(150);
-  lcd.backlight();
+  LCD_Innit(); 
 
   // Initialize queue
-  // RX_Queue = xQueueCreate(10, MESSAGE_LENGTH * sizeof(char));
-  LCD_Queue = xQueueCreate(10, sizeof(QueueItem));
+   RX_Queue = xQueueCreate(10, MESSAGE_LENGTH * sizeof(char));
+  // LCD_Queue = xQueueCreate(10, sizeof(QueueItem));
   
   // Create Task 1 (runs on Core 0 by default)
   xTaskCreatePinnedToCore(
@@ -466,6 +325,7 @@ void setup() {
     attachInterrupt(digitalPinToInterrupt(colPins[i]), Key_Pressed_ISR, FALLING);
   }
 
+  //put in initial value for testing
   Valid_Entrance_Codes.addEntry(Start_Pass);
   Valid_Entrance_Codes.printBuffer();
   // Create Task 2 (runs on Core 0)
@@ -479,16 +339,16 @@ void setup() {
     0                         // Core where the task should run
   );
 
-  // // // Create task 3 (rus on core 0)
-  // // xTaskCreatePinnedToCore(
-  // //    RX_Message_Process,  // Task function. 
-  // //   "RX_Message_Process",     // name of task. 
-  // //   10000,                    // Stack size of task 
-  // //   NULL,                     // parameter of the task 
-  // //   2,                        // priority of the task 
-  // //   &RX_Message_Handle,      // Task handle to keep track of created task 
-  // //   0                         // pin task to core 0 
-  // //   );                       
+  // Create task 3 (rus on core 0)
+  xTaskCreatePinnedToCore(
+     RX_Message_Process,  // Task function. 
+    "RX_Message_Process",     // name of task. 
+    10000,                    // Stack size of task 
+    NULL,                     // parameter of the task 
+    2,                        // priority of the task 
+    &RX_Message_Handle,      // Task handle to keep track of created task 
+    0                         // pin task to core 0 
+    );                       
 
   // Create task 4 (runs on core 0)
   xTaskCreatePinnedToCore(
@@ -513,10 +373,9 @@ void setup() {
   // Initialize BluetoothSerial and set up the callback SerialBT.onData(onBluetoothDataReceived);
  
 
-  // // // Attach UART interrupt 
-  // // RS485Serial.onReceive(onUartRx); // Attach the interrupt handler
-  // lcd.setCursor(0,0);
-  // lcd.print("   Enter Key:   ");
+  // Attach UART interrupt 
+  RS485Serial.onReceive(onUartRx); // Attach the interrupt handler
+
   Enter_Mess(); //LCD default screen
 
 }

@@ -85,7 +85,7 @@ void Comms_Set_Up(){
     );       
 
   // Attach UART interrupt 
-  RS485Serial.onReceive(onUartRx); // Attach the interrupt handler
+ 
   #endif
   attachInterrupt(digitalPinToInterrupt(Bus_Monitor_Pin), Bus_Monitor_Pin_interrupt, CHANGE);
   delay(1000);
@@ -361,7 +361,7 @@ void RX_Message_Process(void *pvParameters) {
   unsigned char receivedMessage[MESSAGE_LENGTH];
   while (1) {
     if (xQueueReceive(RX_Queue, &receivedMessage, portMAX_DELAY)) {
-
+      memset(RX_Message_Payload, 0, sizeof(RX_Message_Payload));
       Addressee = Decode_Message(receivedMessage, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
       // Process received message
       Serial.print("Received message: ");
@@ -370,6 +370,7 @@ void RX_Message_Process(void *pvParameters) {
         Serial.print(" ");
       }
       Serial.println();
+      Serial.println((char*)RX_Message_Payload);
     }
   }
 }
