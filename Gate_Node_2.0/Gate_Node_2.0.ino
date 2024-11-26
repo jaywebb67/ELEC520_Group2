@@ -12,6 +12,11 @@
 
 BluetoothSerial SerialBT;
 
+QueueHandle_t LCD_Queue;
+
+//create LCD object
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
 //const uint8_t Home_Node_Type = 0x35;
 uint8_t Home_Address = 0x13;
 uint8_t Destination_Address = 0x28;
@@ -20,7 +25,7 @@ CharBuffer Valid_Entrance_Codes(100, 6);
 CharBuffer Current_Codes_In_Use(100, 6);
 
 //ESP32 WROOM pins
-const int rowPins[4] = {18, 19, 21, 22};     // Row pins connected to the keypad
+const int rowPins[4] = {18, 19, 13, 32};     // Row pins connected to the keypad
 const int colPins[4] = {23, 25, 26, 27};     // Column pins connected to the keypad
 char Input_Key_Code[7];
 char BT_Key_Code[7];
@@ -34,10 +39,69 @@ volatile int keypresses = 0;
 volatile unsigned long lastInterruptTime = 0;
 volatile bool isPressed = false;
 
+typedef void (*FunctionPointer)(void);
+
+typedef struct {
+  FunctionPointer func;
+} QueueItem;
+
+
+
 // Define task handles
 TaskHandle_t Keypad_Reader = NULL;
 TaskHandle_t Bluetooth_Task_Handle = NULL; // Task handle for Bluetooth task
+TaskHandle_t LCD_Thread_Handle;
 
+
+void Enter_Mess() {
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("   Enter Key:   ");
+}
+
+void Access_G() {
+  lcd.setCursor(0,0);
+  lcd.print("     Access     ");
+  lcd.setCursor(0,1);
+  lcd.print("     Granted    ");
+}
+
+void Access_D() {
+  lcd.setCursor(0,0);
+  lcd.print("     Access     ");
+  lcd.setCursor(0,1);
+  lcd.print("     Denied     ");
+}
+
+void Bye() {
+  lcd.setCursor(0,0);
+  lcd.print("     So Long    ");
+  lcd.setCursor(0,1);
+  lcd.print("    Farewell    ");
+}
+
+void Invalid_Mess(){
+  lcd.setCursor(0,0);
+  lcd.print("    Invalid     ");
+  lcd.setCursor(0,1);
+  lcd.print("     Input      ");
+}
+
+void Broken(){
+  lcd.setCursor(0,0);
+  lcd.print("    I Need A    ");
+  lcd.setCursor(0,1);
+  lcd.print("    COFFEE      ");
+}
+
+
+
+void Send_To_LCD_Queue(FunctionPointer func) {
+  QueueItem item = {func};
+  if (xQueueSend(LCD_Queue, &item, portMAX_DELAY) != pdPASS) {
+    Serial.println("Failed to send to queue.");
+  }
+}
 
 void IRAM_ATTR Key_Pressed_ISR() {
   unsigned long interruptTime = millis();
@@ -53,13 +117,6 @@ void IRAM_ATTR Key_Pressed_ISR() {
 }
 
 
-// void onBluetoothDataReceived(const uint8_t *data, size_t len) {
-//   //Serial.println("Bluetooth data received");
-//   // Notify the Bluetooth task
-//   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-//   vTaskNotifyGiveFromISR(Bluetooth_Task_Handle, &xHigherPriorityTaskWoken);
-//   portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
-// }
 void onBluetoothDataReceived(const uint8_t *data, size_t len) {
   Serial.print("Received data length: ");
   Serial.println(len);
@@ -92,7 +149,46 @@ void onBluetoothDataReceived(const uint8_t *data, size_t len) {
 }
 
 
-
+void notify_User(int x, int y) {
+  switch (x) {
+    case 1:     // Bluetooth thread call
+      switch (y) {
+        case 1:
+          SerialBT.println("Access Denied");
+          break;
+        case 2:
+          SerialBT.println("Access Granted");
+          break;
+        case 3:
+          SerialBT.println("Toodle Pip");
+          break;
+        default:
+          SerialBT.println("I Need A COFFEE");
+          break;
+      }
+      break;
+    case 2:     // Keypad thread call
+      switch (y) {
+        case 1:
+          Send_To_LCD_Queue(Access_D);
+          break;
+        case 2:
+          Send_To_LCD_Queue(Access_G);
+          break;
+        case 3:
+          Send_To_LCD_Queue(Bye);
+          break;
+        default:
+          Send_To_LCD_Queue(Broken);
+          break;
+      }
+      break;
+    default:
+      SerialBT.println("I Need A COFFEE");
+      Send_To_LCD_Queue(Broken);
+      break;
+  }
+}
 
 //Function to check recieved keycodes
 int Test_Entry_Code(const char* code){
@@ -120,8 +216,7 @@ int Test_Entry_Code(const char* code){
   }
 }
 
-// const int rowPins[4] = {12, 14, 27, 26};     // Row pins connected to the keypad
-// const int colPins[4] = {25, 23, 32, 35};     // Column pins connected to the keypad
+ //const int colPins[4] = {25, 23, 32, 35};     // Column pins connected to the keypad
 // Task 1 function 
 void Keypad_Read(void *pvParameters) {
   bool keyPressed = false;
@@ -185,10 +280,13 @@ void Keypad_Read(void *pvParameters) {
       if(Valid_Input_Presses == 6){
         // Process the valid 6-byte code
          int y = Test_Entry_Code(Input_Key_Code);
-        // notify_User(2, y);
+         notify_User(2, y);
         Serial.println(y);
         Serial.println(Input_Key_Code);
         Valid_Input_Presses = 0;
+        //display foe 2 seconds
+        vTaskDelay(pdMS_TO_TICKS(2000));
+        Send_To_LCD_Queue(Enter_Mess);
       }
       // Reset key press flag and update debounce time
       keyPressed = false;
@@ -200,7 +298,8 @@ void Keypad_Read(void *pvParameters) {
     }
     // Reset pressed flag 
       isPressed = false;
-      //Send_To_LCD_Queue(Enter_Mess);
+
+      
   }
 }
 
@@ -302,14 +401,29 @@ void Process_BT_Message(void *pvParameters) {
     if (bytes_Received == 6) {
       // Process the valid 6-byte code
       int y = Test_Entry_Code(BT_Key_Code);
-      //notify_User(1, y);
+      notify_User(1, y);
       SerialBT.println("Valid Code");
     } else {
       Serial.println("Invalid Code");
       SerialBT.println("Invalid Code");
     }
-
+    // // Process the valid 6-byte code
+    // int y = Test_Entry_Code(BT_Key_Code);
+    // notify_User(1, y);
     bytes_Received = 0; // Reset bytes_Received for the next code
+  }
+}
+
+// Task 4 function
+void LCD_Thread(void *pvParameters) {
+  QueueItem item; 
+  while (1) { 
+    if (xQueueReceive(LCD_Queue, &item, portMAX_DELAY)) { 
+      // Call the function 
+      item.func(); 
+    } 
+    // sleep for 2 seconds as minimum LCD display time 
+    vTaskDelay(pdMS_TO_TICKS(2000));
   }
 }
 
@@ -322,14 +436,14 @@ void setup() {
   //call function to set up correct communication pins and serial port for the board in use
   //Comms_Set_Up();
   Serial.println("Hello");
-  // //LCD setup
-  // lcd.init();
-  // lcd.setBacklight(255);
-  // lcd.backlight();
+  //LCD setup
+  lcd.init();
+  lcd.setBacklight(150);
+  lcd.backlight();
 
   // Initialize queue
   // RX_Queue = xQueueCreate(10, MESSAGE_LENGTH * sizeof(char));
-  // LCD_Queue = xQueueCreate(10, sizeof(QueueItem));
+  LCD_Queue = xQueueCreate(10, sizeof(QueueItem));
   
   // Create Task 1 (runs on Core 0 by default)
   xTaskCreatePinnedToCore(
@@ -376,16 +490,16 @@ void setup() {
   // //   0                         // pin task to core 0 
   // //   );                       
 
-  // // Create task 4 (runs on core 0)
-  // xTaskCreatePinnedToCore(
-  //    LCD_Thread,            //Task function
-  //   "LCD_Thread",               //name of task
-  //   10000,                      //stacksize of task
-  //   NULL,                       //parameter of task
-  //   1,                          //priority of task
-  //   &LCD_Thread_Handle,                //Task handle to keep track of created task 
-  //   0                           //pin task to core 0
-  // );
+  // Create task 4 (runs on core 0)
+  xTaskCreatePinnedToCore(
+     LCD_Thread,            //Task function
+    "LCD_Thread",               //name of task
+    10000,                      //stacksize of task
+    NULL,                       //parameter of task
+    1,                          //priority of task
+    &LCD_Thread_Handle,                //Task handle to keep track of created task 
+    0                           //pin task to core 0
+  );
   
   
 
@@ -401,8 +515,10 @@ void setup() {
 
   // // // Attach UART interrupt 
   // // RS485Serial.onReceive(onUartRx); // Attach the interrupt handler
+  // lcd.setCursor(0,0);
+  // lcd.print("   Enter Key:   ");
+  Enter_Mess(); //LCD default screen
 
-  // Enter_Mess(); LCD default screen
 }
 
 void loop() {
