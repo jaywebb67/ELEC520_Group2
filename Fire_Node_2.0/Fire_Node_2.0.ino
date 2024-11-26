@@ -70,11 +70,10 @@ void loop() {
     }
   }
 
-  // Reading temperature or humidity takes about 250 milliseconds!
-  float h = dht.readHumidity();
+  // Reading temperature takes about 250 milliseconds!
   float t = dht.readTemperature();
 
-  if (isnan(h) || isnan(t)) {
+  if (isnan(t)) {
     Serial.println("Failed to read from DHT sensor!");
     Serial.println();
     Transmit_To_Bus(&Fire_2);
