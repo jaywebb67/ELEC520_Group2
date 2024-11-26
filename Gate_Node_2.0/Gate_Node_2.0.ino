@@ -61,16 +61,37 @@ void IRAM_ATTR Key_Pressed_ISR() {
 //   portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
 // }
 void onBluetoothDataReceived(const uint8_t *data, size_t len) {
-  // Copy received data to global buffer
-  bytes_Received = (len < sizeof(BT_Key_Code)) ? len : sizeof(BT_Key_Code) - 1; // Ensure no buffer overflow
-  memcpy(BT_Key_Code, data, bytes_Received);
-  BT_Key_Code[bytes_Received] = '\0'; // Null-terminate the string
+  Serial.print("Received data length: ");
+  Serial.println(len);
 
-  // Notify the Bluetooth task
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  vTaskNotifyGiveFromISR(Bluetooth_Task_Handle, &xHigherPriorityTaskWoken);
-  portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
+  uint32_t validBytesReceived = 0; // Counter for valid characters
+
+  // Copy received data to global buffer while filtering out control characters
+  for (size_t i = 0; i < len && validBytesReceived < sizeof(BT_Key_Code) - 1; i++) {
+    if (data[i] != '\r' && data[i] != '\n') { // Ignore newline and carriage return characters
+      BT_Key_Code[validBytesReceived++] = data[i];
+    }
+  }
+  BT_Key_Code[validBytesReceived] = '\0'; // Null-terminate the string
+
+  bytes_Received = (len-2); // Update bytes_Received with the count of valid characters
+
+  Serial.print("Filtered data length: ");
+  Serial.println(bytes_Received);
+
+  // Check if total characters received, including control characters, exceed 6
+  if (validBytesReceived != 6) {
+    Serial.println("Invalid Code - More than 6 characters received");
+    SerialBT.println("Invalid Code - More than 6 characters received");
+  } else {
+    // Notify the Bluetooth task
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    vTaskNotifyGiveFromISR(Bluetooth_Task_Handle, &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
+  }
 }
+
+
 
 
 //Function to check recieved keycodes
