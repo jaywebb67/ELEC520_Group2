@@ -4,6 +4,7 @@
 #include "Char_Buffer.h"
 #include "Communication_Protocol.h"
 #include "LCD_Manager.h"
+#include "MQTT.hpp"
 //#include "Gate_Function.h"
 #include "esp_system.h"
 #include "driver/uart.h"
@@ -313,6 +314,7 @@ void setup() {
   Comms_Set_Up();
   Serial.println("Hello");
   LCD_Innit(); 
+  void mqttSetUp();
 
   // Initialize queue
    RX_Queue = xQueueCreate(10, MESSAGE_LENGTH * sizeof(char));
