@@ -76,51 +76,63 @@ void mqttSetUp(){
         return;
     }
     else{
-        Serial.println("WiFi connected");
-        Serial.print("Connected to ");
-        Serial.println(ssid);
-        Serial.print("IP address: ");
-        Serial.println(WiFi.localIP());
-        setClock();
+      Serial.println("WiFi connected");
+      Serial.print("Connected to ");
+      Serial.println(ssid);
+      Serial.print("IP address: ");
+      Serial.println(WiFi.localIP());
+      setClock();
 
-        client.setCACert(isrg_root_x1_cert);
-        //client.setInsecure();
-        Serial.println("\nStarting connection to server...");
+      client.setCACert(isrg_root_x1_cert);
+      //client.setInsecure();
+      Serial.println("\nStarting connection to server...");
+      
+      if (!client.connect(mqttServer, mqttPort)) {
+          Serial.println("Connection to server failed!");
+      }else{
+          Serial.println("Connected to server!");
+      }
+      mqttClient.setBufferSize(512);
+      mqttClient.setCallback(mqttCallback);
+
+      if (!LittleFS.begin()) {
+      Serial.println("Failed to mount LittleFS");
+      return;
+      } 
+      
+      Serial.println("LittleFS mounted successfully");
+
+      mqttMessageQueue = xQueueCreate(10, sizeof(MqttMessage));
+  
+
+      // Create a task that runs on Core 0
+      xTaskCreatePinnedToCore(
+          mqttHandler,            // Function to run
+          "mqttHandler",         // Name of the task
+          10000,            // Stack size (in words)
+          NULL,             // Task input parameter
+          1,                // Priority of the task
+          NULL,             // Task handle
+          1);               // Core 1
+      
+              // Create a task that runs on Core 0
+      xTaskCreatePinnedToCore(
+          MQTT_task,            // Function to run
+          "MQTT_task",         // Name of the task
+          10000,            // Stack size (in words)
+          NULL,             // Task input parameter
+          1,                // Priority of the task
+          NULL,             // Task handle
+          1);               // Core 1
+      
         
-        if (!client.connect(mqttServer, mqttPort)) {
-            Serial.println("Connection to server failed!");
-        }else{
-            Serial.println("Connected to server!");
-        }
-        mqttClient.setBufferSize(512);
-        mqttClient.setCallback(mqttCallback);
-
-        if (!LittleFS.begin()) {
-        Serial.println("Failed to mount LittleFS");
-        return;
-        } 
-        
-        Serial.println("LittleFS mounted successfully");
-
-        mqttMessageQueue = xQueueCreate(10, sizeof(MqttMessage));
-    
-
-        // Create a task that runs on Core 0
-        xTaskCreatePinnedToCore(
-            mqttHandler,            // Function to run
-            "mqttHandler",         // Name of the task
-            10000,            // Stack size (in words)
-            NULL,             // Task input parameter
-            1,                // Priority of the task
-            NULL,             // Task handle
-            1);               // Core 1
-        
-        reconnect(1);
 
     }
 }
 
 void MQTT_task(){
+    
+    reconnect(1);
     while(true){
 
         if (restartFlag){
