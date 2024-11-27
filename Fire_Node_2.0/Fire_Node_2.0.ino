@@ -28,6 +28,28 @@ void alarm_Pressed_interrupt() {
   alarm_Pressed = true;
 }
 
+void Test_Heat_Sensor() {
+  // Reading temperature takes about 250 milliseconds!
+  float t = dht.readTemperature();
+
+  if (isnan(t)) {
+    Serial.println("Failed to read from DHT sensor!");
+    Serial.println();
+    Transmit_To_Bus(&Fire_2);
+  }
+
+  Serial.print("Temperature read = ");
+  Serial.println(t);
+  t += random(1, 30); // Simulate temperature fluctuation for testing
+  Serial.print("New Temperature = ");
+  Serial.println(t);
+  
+  if (t > Max_Temp) {
+    Serial.println("Maximum allowable temperature exceeded");
+    Transmit_To_Bus(&Fire_3);
+  }
+}
+
 void setup() {
   Serial.begin(9600);
   Comms_Set_Up();
@@ -42,7 +64,6 @@ void loop() {
   if(RS485Serial.available()){
     Addressee = Read_Serial_Port();
   
-
   if(Addressee == Home_Address){
       Serial.println((char*)RX_Message_Payload);
       Serial.print("Sender's address: ");
@@ -70,36 +91,21 @@ void loop() {
     }
   }
 
-  // Reading temperature takes about 250 milliseconds!
-  float t = dht.readTemperature();
-
-  if (isnan(t)) {
-    Serial.println("Failed to read from DHT sensor!");
-    Serial.println();
-    Transmit_To_Bus(&Fire_2);
-  }
-
-  Serial.print("Temperature read = ");
-  Serial.println(t);
-  t += random(1, 30); // Simulate temperature fluctuation for testing
-  Serial.print("New Temperature = ");
-  Serial.println(t);
-  
-  if (t > Max_Temp) {
-    Serial.println("Maximum allowable temperature exceeded");
-    Transmit_To_Bus(&Fire_3);
-  }
-  
   if (alarm_Pressed) {
-    Serial.println("Fire alarm triggered");
-    Transmit_To_Bus(&Fire_1);
+  Serial.println("Fire alarm triggered");
+  Transmit_To_Bus(&Fire_1);
   }
 
-   int x = random(1, 100);
+  unsigned long Current_Time = millis();
+  if(Current_Time - Last_Time >= Sensor_Read_Interval) {
+    Test_Heat_Sensor();
+  }
+  
+
+  int x = random(1, 100);
   if(x>90){
     Destination_Address = 0x33;
     Transmit_To_Bus(&Hello);
     Destination_Address = 0x28;
   }
-  delay(2000);
 }
