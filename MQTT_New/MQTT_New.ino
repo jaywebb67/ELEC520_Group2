@@ -1,37 +1,20 @@
 #include <LiquidCrystal_I2C.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
-#include <PubSubClient.h>
+
 #include <Keypad.h>
-#include <cstring>  // Ensure this library is included for strcmp and memset
-#include <LittleFS.h>
+
 #include "./MQTT.hpp"
 
 
-// Define a queue to hold messages
-QueueHandle_t messageQueue;
 
-// Struct to store topic and message information
-struct MqttMessage {
-  String topic = "";
-  String payload = "";  
-};
-
-String payload = "";
-String ping = "";
-
-String clientId = "";
 // WiFi credentials
 // Update these with values suitable for your network.
 const char* ssid = "Galaxy S20+ 5G 1bc4";  //       // your network SSID (WiFi name)
 const char* password = "dozv6951";   // "jaywebb1"; //your network password
 
 
-//NetworkClientSecure client;
-NetworkClientSecure client;
-PubSubClient mqttClient(client);
+
 
 ////keypad setup
 //keypad dimensions
@@ -62,9 +45,8 @@ char currentInput[passwordMaxLength] = {0};
 
 char key;
 bool accessGranted = false;
-bool restartFlag = false;
+
 int idx = 0; 
-long lastReconnectAttempt = 0;
 
 
 void getInput(){
@@ -157,15 +139,6 @@ void setup() {
   //Initialize serial and wait for port to open:
   Serial.begin(115200);
 
-  if (!LittleFS.begin()) {
-    Serial.println("Failed to mount LittleFS");
-    return;
-  } 
-  Serial.println("LittleFS mounted successfully");
-
-  lcd.init();
-  lcd.setBacklight(255);
-  lcd.backlight();
 
   // Create a queue to hold up to 10 messages
   messageQueue = xQueueCreate(10, sizeof(MqttMessage));
@@ -178,7 +151,7 @@ void setup() {
     NULL,             // Task input parameter
     1,                // Priority of the task
     NULL,             // Task handle
-    0);               // Core 1
+    1);               // Core 1
     reconnect(1);
 }
 
@@ -198,16 +171,7 @@ void loop() {
   } else {
     checkPassword();
   }
-    // Check if it's time to send the ping message
-  long now = millis();
-  if (now - lastReconnectAttempt >= 10000) { // 10 seconds
-    lastReconnectAttempt = now;
-    if (!mqttClient.publish("ELEC520/devicePing", ping.c_str())) {
-      Serial.println("Failed to send ping message");
-    }
-  }
-  client.ping();
-  mqttClient.loop();
+
 }
 
 

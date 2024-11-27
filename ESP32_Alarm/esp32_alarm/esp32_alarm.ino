@@ -261,29 +261,7 @@ void setup(){
   Serial.println("LittleFS mounted successfully");
 
   // Create a queue to hold up to 10 messages
-  messageQueue = xQueueCreate(10, sizeof(MqttMessage));
-  
-  // xMutex = xSemaphoreCreateMutex();
 
-  // // Check if mutex was created successfully
-  // if (xMutex == NULL) {
-  //     // Mutex creation failed
-  //     Serial.println("Mutex creation failed!");
-  // } else {
-  //     // Mutex created successfully
-  //     Serial.println("Mutex created successfully!");
-  // }
-
-  // Create a task that runs on Core 0
-  xTaskCreatePinnedToCore(
-    mqttHandler,            // Function to run
-    "mqttHandler",         // Name of the task
-    10000,            // Stack size (in words)
-    NULL,             // Task input parameter
-    1,                // Priority of the task
-    NULL,             // Task handle
-    0);               // Core 1
-    reconnect(1);
 }
 
 
