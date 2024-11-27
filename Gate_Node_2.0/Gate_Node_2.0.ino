@@ -61,6 +61,20 @@ void IRAM_ATTR Key_Pressed_ISR() {
   }
 }
 
+// //alternative keypad ISR more stable but wrong in every way
+// void IRAM_ATTR Key_Pressed_ISR() {
+//   unsigned long interruptTime = millis();
+//   // Debounce logic
+//   if ((interruptTime - lastInterruptTime > debounceDelay) && !isPressed) {
+//     isPressed = true;
+//     keypresses++;
+//     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+//     vTaskNotifyGiveFromISR(Keypad_Reader, &xHigherPriorityTaskWoken);
+//     portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
+//   }
+//   lastInterruptTime = interruptTime;
+// }
+
 void onBluetoothDataReceived(const uint8_t *data, size_t len) {
   Serial.print("Received data length: ");
   Serial.println(len);
