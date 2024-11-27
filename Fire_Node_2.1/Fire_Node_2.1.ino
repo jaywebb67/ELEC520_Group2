@@ -27,8 +27,7 @@ struct TX_Payload Hello = {2, "Hi"};
 
 DHT dht(DHTPIN, DHTTYPE);
 
-Task Task1(2000, TASK_FOREVER, &Read_Sensor);
-Task Task2(100, TASK_FOREVER, &Serial_RX);
+
 
 void alarm_Pressed_interrupt() {
   alarm_Pressed = true;
@@ -101,6 +100,9 @@ void Serial_RX() {
   }
   RX_Flag = false;
 }
+
+Task Task1(2000, TASK_FOREVER, &Read_Sensor);
+Task Task2(100, TASK_FOREVER, &Serial_RX);
 
 void setup() {
   Serial.begin(9600);
