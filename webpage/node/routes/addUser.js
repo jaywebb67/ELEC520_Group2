@@ -25,8 +25,9 @@ router.post('/add-user', async (req, res) => {
         const usersRef = admin.database().ref('users');
         let isUnique = false;
 
+
         while (!isUnique) {
-            gateCode = Math.floor(100000 + Math.random() * 900000).toString(); // Generate 6-digit code
+            gateCode = Math.floor(Math.random*1000000).toString().padStart(6,'0'); // Generate 6-digit code
             const usersSnapshot = await usersRef.once('value');
             isUnique = !Object.values(usersSnapshot.val() || {}).some(user => user.gateCode === gateCode);
         }

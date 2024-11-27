@@ -158,78 +158,79 @@ mqttClient.on('message', async (topic, message) => {
         console.error('Error processing ELEC520/devices/view message:', error);
       }
     }
-      if (topic === 'ELEC520/userAccess') {
-        const payload = message.toString().trim();
-    
-        const [username, gateID] = payload.split(' ');
-    
-        if (!username || !gateID) {
-            console.error('Invalid message format. Expected "username gateID".');
-            return;
-        }
-    
-        try {
-            const locationAccessed = await getLocation(gateID);
-            const gateType = await getGateType(gateID);
-            const building = await getBuilding(gateID);
-    
-            if (!locationAccessed || !gateType || !building) {
-                console.error(`Invalid gateID or missing data for: ${gateID}`);
-                return;
-            }
-    
-            const now = new Date();
-            const timeaccess = now.toISOString();
-    
-            const userAccessRef = admin.database().ref('userAccess');
-            const snapshot = await userAccessRef.once('value');
-            const userAccessData = snapshot.val() || {};
-    
-            let userFound = false;
-    
-            // Iterate through the keys of the object
-            for (const [key, value] of Object.entries(userAccessData)) {
-                if (value.user === username) {
-                    userFound = true;
-                    
-                    if (gateType === 'room' && value.location === locationAccessed) {
-                        console.log(`User ${username} accessed room ${locationAccessed} again. Removing location.`);
-                        value.location = building;
-                        break;
-                    }
-    
-                    if (gateType === 'entrance' && ((value.location === locationAccessed)||(value.building === building))) {
-                        console.log(`User ${username} exited the building via ${locationAccessed}. Removing user.`);
-                        delete userAccessData[key]; // Remove user
-                        break;
-                    }
-    
-                    value.location = locationAccessed;
-                    value.timeAccessed = timeaccess;
-                    value.building = building;
-                    break;
-                }
-            }
-    
-            // If no existing entry was found, create a new one
-            if (!userFound) {
-                const newKey = userAccessRef.push().key; // Generate a new unique key
-                userAccessData[newKey] = {
-                    user: username,
-                    location: locationAccessed,
-                    timeAccessed: timeaccess,
-                    building: building,
-                };
-            }
-    
-            await userAccessRef.set(userAccessData);
-    
-            console.log(`Access logged: User=${username}, Location=${locationAccessed}, Time=${timeaccess}, Building=${building}`);
-            notifyUserAccessTableUpdate();
-        } catch (error) {
-            console.error('Error processing ELEC520/userAccess:', error);
-        }
-    }
+    if (topic === 'ELEC520/userAccess') {
+      const payload = message.toString().trim();
+  
+      const [username, gateID] = payload.split(' ');
+  
+      if (!username || !gateID) {
+          console.error('Invalid message format. Expected "username gateID".');
+          return;
+      }
+  
+      try {
+          const locationAccessed = await getLocation(gateID);
+          const gateType = await getGateType(gateID);
+          const building = await getBuilding(gateID);
+  
+          if (!locationAccessed || !gateType || !building) {
+              console.error(`Invalid gateID or missing data for: ${gateID}`);
+              return;
+          }
+  
+          const now = new Date();
+          const timeaccess = now.toISOString();
+  
+          const userAccessRef = admin.database().ref('userAccess');
+          const snapshot = await userAccessRef.once('value');
+          const userAccessData = snapshot.val() || {};
+  
+          let userFound = false;
+  
+          // Iterate through the keys of the object
+          for (const [key, value] of Object.entries(userAccessData)) {
+              if (value.user === username) {
+                  userFound = true;
+                  
+                  if (gateType === 'room' && value.location === locationAccessed) {
+                      console.log(`User ${username} accessed room ${locationAccessed} again. Removing location.`);
+                      value.location = building;
+                      break;
+                  }
+  
+                  if (gateType === 'entrance' && ((value.location === locationAccessed)||(value.building === building))) {
+                      console.log(`User ${username} exited the building via ${locationAccessed}. Removing user.`);
+                      delete userAccessData[key]; // Remove user
+                      break;
+                  }
+  
+                  value.location = locationAccessed;
+                  value.timeAccessed = timeaccess;
+                  value.building = building;
+                  break;
+              }
+          }
+  
+          // If no existing entry was found, create a new one
+          if (!userFound) {
+              const newKey = userAccessRef.push().key; // Generate a new unique key
+              userAccessData[newKey] = {
+                  user: username,
+                  location: locationAccessed,
+                  timeAccessed: timeaccess,
+                  building: building,
+              };
+          }
+  
+          await userAccessRef.set(userAccessData);
+  
+          console.log(`Access logged: User=${username}, Location=${locationAccessed}, Time=${timeaccess}, Building=${building}`);
+          notifyUserAccessTableUpdate();
+      } catch (error) {
+          console.error('Error processing ELEC520/userAccess:', error);
+      }
+  }
+  
         
     if (topic === 'ELEC520/devicePing') {
       const payload = message.toString().trim();
