@@ -11,7 +11,7 @@
 // WiFi credentials
 // Update these with values suitable for your network.
 const char* ssid = "Galaxy S20+ 5G 1bc4";  //       // your network SSID (WiFi name)
-const char* password = "dozv6951";   // "jaywebb1"; //your network password
+const char* password = "jaywebb1"; //your network password
 
 
 
