@@ -115,22 +115,22 @@ void mqttSetUp(){
           NULL,             // Task handle
           1);               // Core 1
       
-              // Create a task that runs on Core 0
+      // Create a task that runs on Core 0
       xTaskCreatePinnedToCore(
-          MQTT_task,            // Function to run
-          "MQTT_task",         // Name of the task
-          10000,            // Stack size (in words)
-          NULL,             // Task input parameter
-          1,                // Priority of the task
-          NULL,             // Task handle
-          1);               // Core 1
+        MQTT_task,            // Function to run
+        "MQTT_task",         // Name of the task
+        10000,            // Stack size (in words)
+        NULL,             // Task input parameter
+        1,                // Priority of the task
+        NULL,             // Task handle
+        1);               // Core 1
       
         
 
     }
 }
 
-void MQTT_task(){
+void MQTT_task(void *pvParameters){
     
     reconnect(1);
     while(true){
@@ -152,7 +152,6 @@ void MQTT_task(){
                 Serial.println("Failed to send ping message");
             }
         }
-        client.ping();
         mqttClient.loop();
     }
 }
