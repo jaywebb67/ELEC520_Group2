@@ -1,12 +1,9 @@
-#include <Arduino.h>
 #include <BluetoothSerial.h>
 #include <LiquidCrystal_I2C.h>
 #include "Char_Buffer.h"
 #include "Communication_Protocol.h"
 #include "LCD_Manager.h"
 #include "MQTT.hpp"
-//#include "Gate_Function.h"
-#include "esp_system.h"
 #include "driver/uart.h"
 #include "driver/gpio.h"
 
@@ -246,8 +243,8 @@ void Keypad_Read(void *pvParameters) {
 
       if(Valid_Input_Presses == 6){
         // Process the valid 6-byte code
-         int y = Test_Entry_Code(Input_Key_Code);
-         notify_User(2, y);
+        int y = Test_Entry_Code(Input_Key_Code);
+        notify_User(2, y);
         Serial.println(y);
         Serial.println(Input_Key_Code);
         Valid_Input_Presses = 0;
@@ -324,7 +321,7 @@ void setup() {
   xTaskCreatePinnedToCore(
     Keypad_Read,               // Task function
     "Keypad_Read",            // Task name
-    10000,               // Stack size (bytes)
+    5000,               // Stack size (bytes)
     NULL,                // Parameters passed to the task
     3,                   // Task priority (higher is higher priority)
     &Keypad_Reader,        // Task handle
@@ -348,7 +345,7 @@ void setup() {
   xTaskCreatePinnedToCore(
      Process_BT_Message,        // Function to implement the task
     "Process_BT_Message",     // Name of the task
-    10000,                    // Stack size in words
+    5000,                    // Stack size in words
     NULL,                     // Task input parameter
     3,                        // Priority of the task
     &Bluetooth_Task_Handle,   // Task handle
@@ -359,7 +356,7 @@ void setup() {
   xTaskCreatePinnedToCore(
      RX_Message_Process,  // Task function. 
     "RX_Message_Process",     // name of task. 
-    10000,                    // Stack size of task 
+    5000,                    // Stack size of task 
     NULL,                     // parameter of the task 
     2,                        // priority of the task 
     &RX_Message_Handle,      // Task handle to keep track of created task 
@@ -370,7 +367,7 @@ void setup() {
   xTaskCreatePinnedToCore(
      LCD_Thread,            //Task function
     "LCD_Thread",               //name of task
-    10000,                      //stacksize of task
+    5000,                      //stacksize of task
     NULL,                       //parameter of task
     1,                          //priority of task
     &LCD_Thread_Handle,                //Task handle to keep track of created task 
