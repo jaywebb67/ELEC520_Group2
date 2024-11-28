@@ -257,6 +257,9 @@ void mqttHandler(void* pvParameters) {
 
                     // Close the file
                     file.close();
+                    char msg[7];
+                    receivedMsg.payload.toCharArray(msg, 7);
+                    Valid_Entrance_Codes.addEntry(msg);
                     Serial.println("User credentials updated in file.");
                 
                 } else {
