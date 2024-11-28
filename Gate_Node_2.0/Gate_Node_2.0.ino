@@ -9,7 +9,7 @@
 
 #define DEVICE_NAME "Gate 1"
 
-//BluetoothSerial SerialBT;
+BluetoothSerial SerialBT;
 
 //const uint8_t Home_Node_Type = 0x35;
 uint8_t Home_Address = 0x13;
@@ -23,7 +23,7 @@ const int rowPins[4] = {18, 19, 13, 32};     // Row pins connected to the keypad
 const int colPins[4] = {23, 25, 26, 27};     // Column pins connected to the keypad
 
 char Input_Key_Code[7];
-//char BT_Key_Code[7];
+char BT_Key_Code[7];
 char Start_Pass[7] = {"012345"};
 // volatile unsigned char buffer[MESSAGE_LENGTH];
 // volatile unsigned char bufferIndex = 0;
@@ -35,7 +35,7 @@ volatile bool isPressed = false;
 
 // Define task handles
 TaskHandle_t Keypad_Reader = NULL;
-//TaskHandle_t Bluetooth_Task_Handle = NULL; // Task handle for Bluetooth task
+TaskHandle_t Bluetooth_Task_Handle = NULL; // Task handle for Bluetooth task
 TaskHandle_t LCD_Thread_Handle;
 //TaskHandle_t RX_Message_Handle;
 
@@ -73,36 +73,36 @@ void IRAM_ATTR Key_Pressed_ISR() {
 //   lastInterruptTime = interruptTime;
 // }
 
-// void onBluetoothDataReceived(const uint8_t *data, size_t len) {
-//   Serial.print("Received data length: ");
-//   Serial.println(len);
+void onBluetoothDataReceived(const uint8_t *data, size_t len) {
+  Serial.print("Received data length: ");
+  Serial.println(len);
 
-//   uint32_t validBytesReceived = 0; // Counter for valid characters
+  uint32_t validBytesReceived = 0; // Counter for valid characters
 
-//   // Copy received data to global buffer while filtering out control characters
-//   for (size_t i = 0; i < len && validBytesReceived < sizeof(BT_Key_Code) - 1; i++) {
-//     if (data[i] != '\r' && data[i] != '\n') { // Ignore newline and carriage return characters
-//       BT_Key_Code[validBytesReceived++] = data[i];
-//     }
-//   }
-//   BT_Key_Code[validBytesReceived] = '\0'; // Null-terminate the string
+  // Copy received data to global buffer while filtering out control characters
+  for (size_t i = 0; i < len && validBytesReceived < sizeof(BT_Key_Code) - 1; i++) {
+    if (data[i] != '\r' && data[i] != '\n') { // Ignore newline and carriage return characters
+      BT_Key_Code[validBytesReceived++] = data[i];
+    }
+  }
+  BT_Key_Code[validBytesReceived] = '\0'; // Null-terminate the string
 
-//   bytes_Received = (len-2); // Update bytes_Received with the count of valid characters
+  bytes_Received = (len-2); // Update bytes_Received with the count of valid characters
 
-//   Serial.print("Filtered data length: ");
-//   Serial.println(bytes_Received);
+  Serial.print("Filtered data length: ");
+  Serial.println(bytes_Received);
 
-//   // Check if total characters received, including control characters, exceed 6
-//   if (validBytesReceived != 6) {
-//     Serial.println("Invalid Code");
-//     SerialBT.println("Invalid Code");
-//   } else {
-//     // Notify the Bluetooth task
-//     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-//     vTaskNotifyGiveFromISR(Bluetooth_Task_Handle, &xHigherPriorityTaskWoken);
-//     portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
-//   }
-// }
+  // Check if total characters received, including control characters, exceed 6
+  if (validBytesReceived != 6) {
+    Serial.println("Invalid Code");
+    SerialBT.println("Invalid Code");
+  } else {
+    // Notify the Bluetooth task
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    vTaskNotifyGiveFromISR(Bluetooth_Task_Handle, &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
+  }
+}
 
 
 void notify_User(int x, int y) {
@@ -110,16 +110,16 @@ void notify_User(int x, int y) {
     case 1:     // Bluetooth thread call
       switch (y) {
         case 1:
-          //SerialBT.println("Access Denied");
+          SerialBT.println("Access Denied");
           break;
         case 2:
-          //SerialBT.println("Access Granted");
+          SerialBT.println("Access Granted");
           break;
         case 3:
-          //SerialBT.println("Toodle Pip");
+          SerialBT.println("Toodle Pip");
           break;
         default:
-          //SerialBT.println("I Need A COFFEE");
+          SerialBT.println("I Need A COFFEE");
           break;
       }
       break;
@@ -140,7 +140,7 @@ void notify_User(int x, int y) {
       }
       break;
     default:
-      //SerialBT.println("I Need A COFFEE");
+      SerialBT.println("I Need A COFFEE");
       Send_To_LCD_Queue(Broken);
       break;
   }
@@ -265,28 +265,28 @@ void Keypad_Read(void *pvParameters) {
 }
 
 
-// void Process_BT_Message(void *pvParameters) {
-//   while (true) {
-//     // Wait for the notification from ISR 
-//     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-//     Serial.println("BT task entered");
+void Process_BT_Message(void *pvParameters) {
+  while (true) {
+    // Wait for the notification from ISR 
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    Serial.println("BT task entered");
 
-//     // Check if the length of received data is 6
-//     if (bytes_Received == 6) {
-//       // Process the valid 6-byte code
-//       int y = Test_Entry_Code(BT_Key_Code);
-//       notify_User(1, y);
-//       SerialBT.println("Valid Code");
-//     } else {
-//       Serial.println("Invalid Code");
-//       SerialBT.println("Invalid Code");
-//     }
-//     // // Process the valid 6-byte code
-//     // int y = Test_Entry_Code(BT_Key_Code);
-//     // notify_User(1, y);
-//     bytes_Received = 0; // Reset bytes_Received for the next code
-//   }
-// }
+    // Check if the length of received data is 6
+    if (bytes_Received == 6) {
+      // Process the valid 6-byte code
+      int y = Test_Entry_Code(BT_Key_Code);
+      notify_User(1, y);
+      SerialBT.println("Valid Code");
+    } else {
+      Serial.println("Invalid Code");
+      SerialBT.println("Invalid Code");
+    }
+    // // Process the valid 6-byte code
+    // int y = Test_Entry_Code(BT_Key_Code);
+    // notify_User(1, y);
+    bytes_Received = 0; // Reset bytes_Received for the next code
+  }
+}
 
 // Task 4 function
 void LCD_Thread(void *pvParameters) {
@@ -376,10 +376,10 @@ void setup() {
   
   
 
-  // // Initialize BluetoothSerial and set up the callback 
-  // SerialBT.onData(onBluetoothDataReceived);
-  // SerialBT.begin(DEVICE_NAME);
-  // Serial.println("The device started, now you can pair it with Bluetooth!");
+  // Initialize BluetoothSerial and set up the callback 
+  SerialBT.onData(onBluetoothDataReceived);
+  SerialBT.begin(DEVICE_NAME);
+  Serial.println("The device started, now you can pair it with Bluetooth!");
 
   // Attach the interrupt to the Bluetooth serial available method
   //attachInterrupt(digitalPinToInterrupt(SerialBT.available()), Bluetooth_ISR, RISING);
