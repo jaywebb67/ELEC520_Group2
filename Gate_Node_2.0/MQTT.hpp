@@ -11,8 +11,8 @@
 
 
 //NetworkClientSecure client;
-NetworkClientSecure client;
-PubSubClient mqttClient(client);
+extern NetworkClientSecure client;
+extern PubSubClient mqttClient;
 
 
 
