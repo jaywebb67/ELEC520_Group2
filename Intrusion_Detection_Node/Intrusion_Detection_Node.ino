@@ -3,6 +3,7 @@
 
 #define RedPin    5
 #define GreenPin  9
+#define YellowPin 10
 #define trigPin   6
 #define echoPin   7
 #define mSensPin  8
@@ -15,7 +16,7 @@ const char Respond_Cmd[8] = "RESPOND";
 const char Reset_Cmd[6] = "RESET";
 const char User_Cmd[6] = "Vuser";
 const char No_User_Cmd[7] = "NVuser";
-bool Occupied = false;
+
 
 const struct TX_Payload Intrusion = {14, "Intruder alarm"};
 const struct TX_Payload Alive = {8, "I'm here"};
@@ -55,12 +56,14 @@ void setup() {
   // configuring pins
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
-  pinMode(RedPin, OUTPUT);
+  pinMode(RedPin, OUTPUT);      //indicates alarm triggered
   pinMode(mSensPin, INPUT);
-  pinMode(GreenPin, OUTPUT);
+  pinMode(GreenPin, OUTPUT);    //indicates sensors arenot operating
+  pinMode(YellowPin, OUTPUT);   //indicates sensors are operating
 
   digitalWrite(RedPin, LOW);
-  digitalWrite(GreenPin, HIGH);
+  digitalWrite(YellowPin, HIGH);
+  digitalWrite(GreenPin, LOW);
 
   //begining connection to serial with 19200 baud rate
   Serial.begin(Baud);
@@ -79,39 +82,51 @@ void setup() {
 
 // called on repeat
 void loop() {
-  if(RS485Serial.available()){
-    Addressee = Read_Serial_Port();
+  uint32_t Sampling_Period = 5000;
+  unsigned long Past_Time = 0;
+  bool Occupied = false;
+  while(true) {
+    if(RS485Serial.available()){
+      Addressee = Read_Serial_Port();
 
-    if(Addressee == Home_Address){
-      Serial.println((char*)RX_Message_Payload);
-      Serial.print("Sender's address: ");
-      Serial.println(Sender_Address, HEX);
-      Serial.print("Sender is a node of type: ");
-      Serial.println(Sender_Node_Type, HEX);
-      // Handle specific commands
-      if (strcmp((char*)RX_Message_Payload, User_Cmd) == 0) {
-        Occupied = true;
-        digitalWrite(GreenPin, LOW);
+      if(Addressee == Home_Address){
+        Serial.println((char*)RX_Message_Payload);
+        Serial.print("Sender's address: ");
+        Serial.println(Sender_Address, HEX);
+        Serial.print("Sender is a node of type: ");
+        Serial.println(Sender_Node_Type, HEX);
+        // Handle specific commands
+        if (strcmp((char*)RX_Message_Payload, User_Cmd) == 0) {
+          Occupied = true;
+          digitalWrite(GreenPin, HIGH);
+        }
+        else if (strcmp((char*)RX_Message_Payload, No_User_Cmd) == 0) {
+          Occupied = false;
+          digitalWrite(GreenPin, LOW);
+          digitalWrite(YellowPin, HIGH);
+        }
+        else if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
+          Transmit_To_Bus(&Alive);
+        } 
       }
-      else if (strcmp((char*)RX_Message_Payload, No_User_Cmd) == 0) {
-        Occupied = false;
-        digitalWrite(GreenPin, HIGH);
-      }
-      else if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
-        Transmit_To_Bus(&Alive);
-      } 
     }
-  }
 
-  if(!Occupied) {
-    UltraSonic();
-    AccXYZ();
-    MotionSensor();
-    if (imuAlert || ultraSonicAlert || mSensValue){
-      digitalWrite(RedPin, HIGH);  
-      Transmit_To_Bus(&Intrusion);  
-    } else {
-      digitalWrite(RedPin, LOW);
+    if(!Occupied) {
+      unsigned long Current_Time = millis();
+      UltraSonic();
+      AccXYZ();
+      MotionSensor();
+      if (imuAlert || ultraSonicAlert || mSensValue){
+        if(Current_Time-Past_Time >= Sampling_Period){
+          digitalWrite(RedPin, HIGH);  
+          Transmit_To_Bus(&Intrusion);  
+          imuAlert = false;
+          ultraSonicAlert = false;
+        } 
+      }
+      else {
+        digitalWrite(RedPin, LOW);
+      }
     }
   }
 }
@@ -128,10 +143,7 @@ void AccXYZ(){
 
   if (AccZ > 1.1 || AccZ < 0.8 || AccX > 0.15 || AccX < -0.15 || AccY > 0.15 || AccY < -0.15){
     imuAlert = true;
-    Transmit_To_Bus(&Intrusion);
-  } else {
-    imuAlert = false;
-  }
+  } 
 
 }
 
@@ -148,9 +160,7 @@ void UltraSonic(){
 
   if (duration < 500){
     ultraSonicAlert = true;
-  } else{
-    ultraSonicAlert = false;
-  }
+  } 
 }
 
 void MotionSensor(){
