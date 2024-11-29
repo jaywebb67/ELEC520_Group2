@@ -9,8 +9,8 @@ struct Set_Up_Pins Esp  = {RX_Pin_E, TX_Pin_E, Max485_CE, Bus_Monitor_Pin};
 SoftwareSerial RS485Serial(10, 11);
 #else
 HardwareSerial RS485Serial(2);    //creadte hardwarSerial object  attached to UART 2
-volatile unsigned char buffer[MESSAGE_LENGTH];
-volatile unsigned char bufferIndex = 0;
+volatile unsigned char RX_buffer[MESSAGE_LENGTH];
+volatile unsigned char RX_bufferIndex = 0;
 QueueHandle_t RX_Queue;
 TaskHandle_t RX_Message_Handle;
 #endif
@@ -40,6 +40,11 @@ unsigned char Ack_message[9] = {
   '\0' // Null-terminator if needed 
   };
 
+uint8_t Intrusion_Address = 0x20;
+uint8_t Fire_Address = 0x21;
+uint8_t Home_Address = 0x13;
+uint8_t Destination_Address = 0x28;
+uint8_t Location;
 uint8_t Sender_Address;
 uint8_t Sender_Node_Type;
 uint8_t Addressee;
@@ -50,7 +55,7 @@ const struct TX_Payload Intro = {1, {Location}};
 //*****USER FUNCTIONS*****//
 
 // Call this function to transmit data the message field is predefined in the header 
-void Transmit_To_Bus(struct TX_Payload* data, unsigned char* message){  
+void Transmit_To_Bus(const struct TX_Payload* data, unsigned char* message){  
   Assemble_Message(data, message);
   if(Clear_To_Send()){
     digitalWrite(Max485_CE, HIGH);
@@ -146,7 +151,7 @@ void Acknowledge(unsigned char* dest, unsigned char* message){
 
 
 // calculates the checksum value for the Tx message
-unsigned char Calculate_Checksum(struct TX_Payload* data) {
+unsigned char Calculate_Checksum(const struct TX_Payload* data) {
   unsigned char checksum = 0;
   for (unsigned char i = 0; i < data->length; i++) {
     checksum ^= data->message[i];
@@ -166,7 +171,7 @@ unsigned char Calculate_RX_Checksum(unsigned char* data, unsigned char length) {
 
 
 //Assemble the transmission into the correct format
-void Assemble_Message(struct TX_Payload* data, unsigned char* message) {
+void Assemble_Message(const struct TX_Payload* data, unsigned char* message) {
   message[0] = START_BYTE;             // Start byte
   message[1] = Home_Address;           // Sender Address byte
   message[2] = Destination_Address;    // Destination Address byte
@@ -316,6 +321,7 @@ void Introduction() {
       if(Addressee == Home_Address) {
         Home_Address = RX_Message_Payload[0];
         Destination_Address = RX_Message_Payload[1];
+        Location = RX_Message_Payload[2];
         reply_received = 1;
       }
     }
@@ -341,13 +347,13 @@ void IRAM_ATTR onUartRx() {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   char data = RS485Serial.read(); // Read data from HardwareSerial
 
-  if (bufferIndex < 40) {
-    buffer[bufferIndex++] = data;
+  if (RX_bufferIndex < 40) {
+    RX_buffer[RX_bufferIndex++] = data;
 
     // Check if the full message is received
-    if (bufferIndex == MESSAGE_LENGTH || data == END_BYTE) {
-      xQueueSendFromISR(RX_Queue, (const void*)buffer, &xHigherPriorityTaskWoken); // Cast buffer to const void*
-      bufferIndex = 0; // Reset buffer index for the next message
+    if (RX_bufferIndex == MESSAGE_LENGTH || data == END_BYTE) {
+      xQueueSendFromISR(RX_Queue, (const void*)RX_buffer, &xHigherPriorityTaskWoken); // Cast buffer to const void*
+      RX_bufferIndex = 0; // Reset buffer index for the next message
     }
   }
 

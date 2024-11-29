@@ -11,9 +11,14 @@
 
 BluetoothSerial SerialBT;
 
-//const uint8_t Home_Node_Type = 0x35;
-uint8_t Home_Address = 0x13;
-uint8_t Destination_Address = 0x28;
+struct TX_Q {
+  const struct TX_Payload* message;
+  uint8_t dest;
+};
+
+struct TX_Q TXbuff_0;
+struct TX_Q TXbuff_1;
+const struct TX_Payload No_User_Cmd = {6, "NVuser"};
 // Create a CharBuffer object with 10 entries, each of size 6 characters 
 CharBuffer Valid_Entrance_Codes(100, 6);
 CharBuffer Current_Codes_In_Use(100, 6);
@@ -25,6 +30,10 @@ const int colPins[4] = {23, 25, 26, 27};     // Column pins connected to the key
 char Input_Key_Code[7];
 char BT_Key_Code[7];
 char Start_Pass[7] = {"012345"};
+//const char User_Cmd[6] = "Vuser";
+const struct TX_Payload User_Cmd = {5, "Vuser"};
+//const char No_User_Cmd[7] = "NVuser";
+
 // volatile unsigned char buffer[MESSAGE_LENGTH];
 // volatile unsigned char bufferIndex = 0;
 volatile uint32_t bytes_Received = 0;
@@ -38,7 +47,9 @@ TaskHandle_t Keypad_Reader = NULL;
 TaskHandle_t Bluetooth_Task_Handle = NULL; // Task handle for Bluetooth task
 TaskHandle_t LCD_Thread_Handle;
 //TaskHandle_t RX_Message_Handle;
+TaskHandle_t TX_Message_Handle;
 
+QueueHandle_t TX_Queue;
 // Timer handle 
 TimerHandle_t Keypad_Timeout_Timer;
 
@@ -159,19 +170,26 @@ int Test_Entry_Code(const char* code){
       Serial.println("Access Granted");
       Current_Codes_In_Use.addEntry(code);
       Current_Codes_In_Use.printBuffer();
-      //Notify_Alarm_Node();
+      Notify_Alarm_Node(&User_Cmd);
       return 2;
     } 
     else {
       Serial.println("Exit Goodbye");
       Current_Codes_In_Use.deleteEntry(x); 
       Current_Codes_In_Use.printBuffer();
-      //Notify_Alarm_Node();
+      Notify_Alarm_Node(&No_User_Cmd);
       return 3;
     }
   }
 }
 
+void Notify_Alarm_Node(const struct TX_Payload* message) {
+  if(Current_Codes_In_Use.getCurrentIndex() == 0) {
+    TXbuff_0.message = message;
+    TXbuff_0.dest = Intrusion_Address;
+    xQueueSend(TX_Queue, &TXbuff_0, portMAX_DELAY);
+  }
+}
 
 // Task 1 function 
 void Keypad_Read(void *pvParameters) {
@@ -301,7 +319,17 @@ void LCD_Thread(void *pvParameters) {
   }
 }
 
-
+void TX_Message_Process(void *pvParameters) {
+  struct TX_Q receivedMessage;
+  while (1) {
+  if (xQueueReceive(TX_Queue, &receivedMessage, portMAX_DELAY)) {
+    uint8_t temp = Destination_Address;
+    Destination_Address = receivedMessage.dest;
+    Transmit_To_Bus(receivedMessage.message);
+    Destination_Address = temp;
+  }
+  }
+}
 
 
 void setup() {
@@ -310,11 +338,11 @@ void setup() {
   //call function to set up correct communication pins and serial port for the board in use
   Comms_Set_Up();
   Serial.println("Hello");
+  mqttSetUp();
   LCD_Innit(); 
-  void mqttSetUp();
-
   // Initialize queue
    RX_Queue = xQueueCreate(10, MESSAGE_LENGTH * sizeof(char));
+   TX_Queue = xQueueCreate(10, sizeof(TX_Q));
   // LCD_Queue = xQueueCreate(10, sizeof(QueueItem));
   
   // Create Task 1 (runs on Core 0 by default)
@@ -373,6 +401,16 @@ void setup() {
     &LCD_Thread_Handle,                //Task handle to keep track of created task 
     0                           //pin task to core 0
   );
+
+  xTaskCreatePinnedToCore(
+     TX_Message_Process,  // Task function. 
+    "TX_Message_Process",     // name of task. 
+    10000,                    // Stack size of task 
+    NULL,                     // parameter of the task 
+    2,                        // priority of the task 
+    &TX_Message_Handle,      // Task handle to keep track of created task 
+    1                         // pin task to core 0 
+    );                       
   
   
 
