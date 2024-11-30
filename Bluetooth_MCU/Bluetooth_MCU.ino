@@ -1,7 +1,7 @@
 #include <Wire.h>
 #include <BluetoothSerial.h>
 
-#define I2C_SLAVE_ADDRESS 0x08 // Address of the slave device
+#define I2C_SLAVE_ADDRESS 0x03 // Address of the slave device
 BluetoothSerial SerialBT;
 
 char BT_Key_Code[7];
@@ -60,6 +60,8 @@ void Process_BT_Message(void *pvParameters) {
     Wire.requestFrom(I2C_SLAVE_ADDRESS, 1);
     if (Wire.available()) {
       char response = Wire.read();
+      Serial.print("Response: ");
+      Serial.println(response);
       if (response == 'Y') {
         Serial.println("Code Accepted");
       } else if (response == 'N') {
