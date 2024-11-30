@@ -1,7 +1,7 @@
 const mqtt = require('mqtt');
 const { getAllUsers, getDeviceID, getLocation, getGateType, getBuilding,getDeviceIDsByLocation } = require('./routes/getTableData'); // Assuming a database module exists
 const admin = require('firebase-admin'); // Firebase Admin SDK should be initialized
-const eventEmitter = require('./eventEmitter.js');
+const eventEmitter = require('./eventEmitter');
 
 function notifyUserAccessTableUpdate() {
   console.log('Notify userAccess table update');
@@ -67,8 +67,8 @@ mqttClient.on('message', async (topic, message) => {
       try {
         // Extract the deviceID from the payload
         const deviceID = message.toString().trim();
-        console.log(`Raw message received: "${message}"`);
-        console.log(`Extracted deviceID: "${deviceID}"`);
+        //console.log(`Raw message received: "${message}"`);
+        //console.log(`Extracted deviceID: "${deviceID}"`);
     
         if (!deviceID) {
           console.error("No deviceID provided in the MQTT message payload.");
@@ -79,7 +79,7 @@ mqttClient.on('message', async (topic, message) => {
     
         // Retrieve all users from the database
         const users = await getAllUsers();
-    
+        console.log('Retrieved users:', users); // Debug log
         if (!users || users.length === 0) {
           console.error("No users found in the database.");
           return;
@@ -116,19 +116,24 @@ mqttClient.on('message', async (topic, message) => {
     
         // Process each user and publish to relevant topics
         for (const user of users) {
-          const payload = `${user.username}:${user.password}`;
+          const payload = `${user.username}:${user.gateCode}`;
     
           for (const id of deviceIDs) {
             const topic = `ELEC520/users/update/${id}`;
             console.log(`Publishing to topic: ${topic} with payload: "${payload}"`);
     
-            mqttClient.publish(topic, payload, (err) => {
-              if (err) {
-                console.error(`Failed to publish to topic ${topic}:`, err);
-              } else {
-                console.log(`Successfully published to topic ${topic}: "${payload}"`);
+            mqttClient.publish(
+              topic,
+              payload,
+              { qos: 0 }, // Change to 2 for QoS 2
+              (err) => {
+                if (err) {
+                  console.error(`Failed to publish to topic ${topic}:`, err);
+                } else {
+                  console.log(`Successfully published to topic ${topic} with QoS 1: "${payload}"`);
+                }
               }
-            });
+            );
     
             // Add a delay to prevent flooding
             await delay(100);
@@ -147,13 +152,18 @@ mqttClient.on('message', async (topic, message) => {
       try {
         const newDeviceID = await getDeviceID(deviceType);
         // Publish the new device ID to the 'ELEC520/devices/update' topic
-        mqttClient.publish('ELEC520/devices/update', newDeviceID, (err) => {
-          if (err) {
-            console.error('Failed to publish new device ID:', err);
-          } else {
-            console.log(`Published new device ID: ${newDeviceID}`);
+        mqttClient.publish(
+          'ELEC520/devices/update',
+          newDeviceID,
+          { qos: 0 }, // Change to 2 for QoS 2
+          (err) => {
+            if (err) {
+              console.error(`Failed to publish to topic ${topic}:`, err);
+            } else {
+              console.log(`Successfully published to topic ${topic} with QoS 1: "${payload}"`);
+            }
           }
-        });
+        );
       } catch (error) {
         console.error('Error processing ELEC520/devices/view message:', error);
       }
@@ -243,7 +253,7 @@ mqttClient.on('message', async (topic, message) => {
           return;
       }
   
-      console.log(`Received access attempt: device ID=${deviceID}, Status=${currentStatus}`);
+      //console.log(`Received access attempt: device ID=${deviceID}, Status=${currentStatus}`);
   
       try {
           // Get the current date and time
@@ -280,7 +290,7 @@ mqttClient.on('message', async (topic, message) => {
           // Write the updated array back to the database
           await deviceStatusRef.set(deviceStatusData);
 
-          console.log(`Access logged: device=${deviceID}, Status=${currentStatus}, Time=${timeaccess}`);
+        //  console.log(`Access logged: device=${deviceID}, Status=${currentStatus}, Time=${timeaccess}`);
           notifyDeviceStatusUpdate();
       } catch (error) {
           console.error('Error processing ELEC520/deviceStatus:', error);

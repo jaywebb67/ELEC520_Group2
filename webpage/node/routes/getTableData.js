@@ -15,11 +15,11 @@ const getAllUsers = async () => {
       const user = childSnapshot.val();
       users.push({
         username: childSnapshot.key, // Assuming the username is the key
-        password: user.password,    // Adjust according to your database structure
+        gateCode: user.gateCode,    // Adjust according to your database structure
         location: user.location
       });
     });
-
+    //console.log('Retrieved users:', users); // Debug log
     return users;
   } catch (error) {
     console.error('Error fetching users from Firebase:', error);

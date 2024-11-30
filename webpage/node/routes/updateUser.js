@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const admin = require('firebase-admin'); // Firebase Admin SDK should already be initialized in app.js
-const eventEmitter = require('../eventEmitter.js');
+const eventEmitter = require('../eventEmitter');
 const mqttClient = require('../mqttclient'); // Import the MQTT client
 
 

@@ -100,7 +100,7 @@ void MQTT_SetUp(){
     mqttClient.setServer(mqttServer,mqttPort);
     mqttClient.setCallback(mqttCallback);
 
-    mqttMessageQueue = xQueueCreate(10, sizeof(MqttMessage));
+    mqttMessageQueue = xQueueCreate(15, sizeof(MqttMessage));
     if (mqttMessageQueue == NULL) {
         Serial.println("Failed to create mqttMessageQueue!");
         while (true); // Halt execution
@@ -127,8 +127,9 @@ void MQTT_task(void* pvParameters) {
             if (!mqttClient.publish("ELEC520/devicePing", ping.c_str())) {
         //        Serial.println("Failed to send ping message");
             }
-            mqttClient.loop();
-        } 
+            mqttClient.loop(); 
+        }
+        
     }
 }
 
@@ -201,10 +202,14 @@ void reconnect(bool onSetUp) {
                 mqttClient.publish("ELEC520/devices/client", "Gate");
             }
             if (onSetUp) {
-                mqttClient.subscribe("ELEC520/users/#", 0);
+                if (mqttClient.subscribe("ELEC520/users/#", 0)) {
+                    Serial.println("Subscribed to ELEC520/users/# with QoS 0");
+                } else {
+                    Serial.println("Failed to subscribe to ELEC520/users/#");
+                }
                 mqttClient.publish("ELEC520/users/view", clientId.c_str());
             }
-            mqttClient.subscribe("ELEC520/#", 0);
+            mqttClient.subscribe("ELEC520/#", MQTTQOS2);
         } else {
             Serial.print("MQTT connection failed, rc=");
             Serial.println(mqttClient.state());
