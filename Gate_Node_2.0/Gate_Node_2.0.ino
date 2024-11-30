@@ -1,4 +1,4 @@
-//#include <BluetoothSerial.h>
+#include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include "Communication_Protocol.h"
 #include "LCD_Manager.h"
@@ -7,7 +7,7 @@
 #include "driver/gpio.h"
 
 #define DEVICE_NAME "Gate 1"
-
+#define I2C_SLAVE_ADDRESS 0x03
 //const uint8_t Home_Node_Type = 0x35;
 uint8_t Home_Address = 0x13;
 uint8_t Destination_Address = 0x28;
@@ -20,6 +20,8 @@ const int colPins[4] = {23, 25, 26, 27};     // Column pins connected to the key
 char Input_Key_Code[7];
 char BT_Key_Code[7];
 char Start_Pass[7] = {"012345"};
+char receivedCode[7];
+volatile bool codeReceived = false;
 // volatile unsigned char buffer[MESSAGE_LENGTH];
 // volatile unsigned char bufferIndex = 0;
 volatile uint32_t bytes_Received = 0;
