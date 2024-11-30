@@ -312,7 +312,12 @@ void mqttHandler(void* pvParameters) {
 
                     char msg[15];
                     receivedMsg.payload.toCharArray(msg, 15);
-                    Valid_Entrance_Codes.addEntry(msg);
+                    Valid_Entrance_Codes.addEntry(msg);  
+                    /*why not
+                    char Kcode[7];
+                    copy_keycode(msg, Kcode);
+                    Valid_Entrance_Codes.addEntry(Kcode);
+                    */
                     Serial.println("User credentials updated in file.");
                 
                 } else {
@@ -331,4 +336,9 @@ void mqttHandler(void* pvParameters) {
     }
 }
 
-
+// void copy_keycode(const char* source, char* dest){
+//   size_t length = strlen(source);
+//   size_t FirstChar = (length>6) ? length-6 : 0;
+//   memcpy(dest, source + FirstChar, 6);
+//   dest[6] = '\0';
+// }
