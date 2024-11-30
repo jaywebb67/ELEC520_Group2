@@ -3,7 +3,7 @@
 #include "Char_Buffer.h"
 #include "Communication_Protocol.h"
 #include "LCD_Manager.h"
-#include "MQTT.hpp"
+//#include "MQTT.hpp"
 #include "driver/uart.h"
 #include "driver/gpio.h"
 
@@ -62,27 +62,27 @@ void TimeoutCallback(TimerHandle_t xTimer) {
   Send_To_LCD_Queue(Enter_Mess);
 }
 
-void IRAM_ATTR Key_Pressed_ISR() {
-  if(!isPressed) {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    vTaskNotifyGiveFromISR(Keypad_Reader, &xHigherPriorityTaskWoken);
-    portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
-  }
-}
-
-// //alternative keypad ISR more stable but wrong in every way
 // void IRAM_ATTR Key_Pressed_ISR() {
-//   unsigned long interruptTime = millis();
-//   // Debounce logic
-//   if ((interruptTime - lastInterruptTime > debounceDelay) && !isPressed) {
-//     isPressed = true;
-//     keypresses++;
+//   if(!isPressed) {
 //     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 //     vTaskNotifyGiveFromISR(Keypad_Reader, &xHigherPriorityTaskWoken);
 //     portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
 //   }
-//   lastInterruptTime = interruptTime;
 // }
+
+//alternative keypad ISR more stable but wrong in every way
+void IRAM_ATTR Key_Pressed_ISR() {
+  unsigned long interruptTime = millis();
+  // Debounce logic
+  if ((interruptTime - lastInterruptTime > debounceDelay) && !isPressed) {
+    isPressed = true;
+    //keypresses++;
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    vTaskNotifyGiveFromISR(Keypad_Reader, &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
+  }
+  lastInterruptTime = interruptTime;
+}
 
 void onBluetoothDataReceived(const uint8_t *data, size_t len) {
   Serial.print("Received data length: ");
@@ -215,7 +215,7 @@ void Keypad_Read(void *pvParameters) {
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY); //wait for flag
 
     isPressed = true;
-    vTaskDelay(pdMS_TO_TICKS(debounceDelay));
+    //vTaskDelay(pdMS_TO_TICKS(debounceDelay));
    
     Serial.println("Entering task 1.");
    
@@ -338,7 +338,7 @@ void setup() {
   //call function to set up correct communication pins and serial port for the board in use
   Comms_Set_Up();
   Serial.println("Hello");
-  mqttSetUp();
+  //mqttSetUp();
   LCD_Innit(); 
   // Initialize queue
    RX_Queue = xQueueCreate(10, MESSAGE_LENGTH * sizeof(char));
@@ -409,7 +409,7 @@ void setup() {
     NULL,                     // parameter of the task 
     2,                        // priority of the task 
     &TX_Message_Handle,      // Task handle to keep track of created task 
-    1                         // pin task to core 0 
+    1                         // pin task to core 1
     );                       
   
   
