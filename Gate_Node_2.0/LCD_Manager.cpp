@@ -1,15 +1,17 @@
 #include "LCD_Manager.h"
 
+#define LCD_I2C_ADDRESS 0x27 
 //create LCD object
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+//LiquidCrystal_I2C lcd(0x27, 16, 2);
+I2C_LCD lcd(LCD_I2C_ADDRESS, &Wire1);
 
 // Define the queue 
 QueueHandle_t LCD_Queue;
 
 void LCD_Innit() {
-  lcd.init();
-  lcd.setBacklight(150);
-  lcd.backlight();
+  lcd.begin();
+  lcd.backlight(); // Turn on the backlight
+  lcd.print("LCD Initialized");
   LCD_Queue = xQueueCreate(10, sizeof(QueueItem));
 }
 
