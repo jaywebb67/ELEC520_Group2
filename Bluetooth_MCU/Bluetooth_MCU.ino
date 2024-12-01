@@ -69,33 +69,35 @@ void Process_BT_Message(void *pvParameters) {
   while (true) {
     // Wait for the notification from ISR 
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-    Serial.println("BT task entered");
-
+    // Serial.println("BT task entered");
+    // Serial.println(BT_Key_Code);
     // Send the 6-byte code to the slave
     Wire.beginTransmission(I2C_SLAVE_ADDRESS);
     Wire.write((const uint8_t*)BT_Key_Code, 6);
     Wire.endTransmission();
 
-    delay(20);
+    delay(100);  //give the slave time to process data
   
     // Request response from the slave
     Wire.requestFrom(I2C_SLAVE_ADDRESS, 1);
+    //Serial.println("request sent");
     uint32_t start_T = millis();
-    //while(!Wire.available() || (millis()-start_T < Timeout)){}
-    while(!Wire.available()) { 
+    
+    while(!Wire.available()) {                      //wait till slave responds
       if (millis() - start_T >= Timeout) { 
         SerialBT.println("Timeout"); 
-        return; // Exit if timeout occurs 
+        break; // Exit if timeout occurs 
       } 
     }
     if (Wire.available()) {
-      // char response = '\n';
       uint8_t response = 0;
       response = Wire.read();
       Wire.requestFrom(I2C_SLAVE_ADDRESS, 1);
       delay(10);
+      //Serial.println(response);
       response = Wire.read();
-     
+      // Serial.print("response: ");
+      // Serial.println(response);
       switch (response) {
         // Bluetooth thread call
         case 1:
