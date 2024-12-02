@@ -312,6 +312,8 @@ void Read_Serial_Data() {
   }
 }
 
+
+/*function needs adapting for this code 
 void Introduction() {
   bool reply_received = 0;
   Transmit_To_Bus((TX_Payload*)&Intro);
@@ -327,6 +329,15 @@ void Introduction() {
     }
   }
 }
+
+need to set bluetooth name
+// Function to set the Bluetooth name 
+void setBluetoothName(const char* name) { 
+  strncpy(bluetoothName, name, sizeof(bluetoothName) - 1); 
+  bluetoothName[sizeof(bluetoothName) - 1] = '\0'; // Ensure null-termination 
+}
+
+*/
 
 void Forward_Messasage() {
  int x = sizeof(Forward);
