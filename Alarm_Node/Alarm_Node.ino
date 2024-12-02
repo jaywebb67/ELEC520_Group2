@@ -7,6 +7,7 @@
 #define PinkPin          12
 #define BluePin          13
 #define GreenPin         14
+#define PurplePin        20
 #define resolution       8
 #define debounceDelay    250
 #define pwmFrequency     5000
@@ -49,7 +50,7 @@ TimerHandle_t Keypad_Timeout_Timer;
 
 TaskHandle_t RX_Message_Handle;
 TaskHandle_t Keypad_Reader = NULL;
-TaskHandle_t LED_Flash = NULL;
+TaskHandle_t LED_Flash;
 
 void setup() {
   // // Start Serial communication
@@ -64,9 +65,11 @@ void setup() {
   pinMode(RedPin_1, OUTPUT);
   pinMode(RedPin_2, OUTPUT);
   pinMode(YellowPin, OUTPUT);
+  pinMode(PurplePin, OUTPUT);
   digitalWrite(RedPin_1, LOW);
   digitalWrite(RedPin_1, LOW);
   digitalWrite(YellowPin, HIGH);
+  digitalWrite(PurplePin, LOW);
   ledcWrite(PinkPin, Pduty);
   ledcWrite(BluePin, Bduty);
   ledcWrite(GreenPin, Gduty);
@@ -115,40 +118,56 @@ void setup() {
   }
   // Attach UART interrupt 
   RS485Serial.onReceive(onUartRx); // Attach the interrupt handler
+  //vTaskSuspend(LED_Flash);
   
 }
 
 
 void loop() {
   // put your main code here, to run repeatedly:
-xTaskNotifyGive(LED_Flash);
+//xTaskNotifyGive(LED_Flash);
 
 }
 
-void Task_LED_Flash(void *pvParameters) { 
-  const int ledInterval = 250; // Interval in milliseconds (4 Hz = 250ms on, 250ms off) 
-  bool ledState1 = false; 
-  bool ledState2 = true; 
-  digitalWrite(RedPin_1, LOW); // Ensure the LED starts off 
+void Set_Alarm(uint8_t pin, uint32_t duty){
+  // xTaskNotifyGive(LED_Flash);
+  vTaskResume( LED_Flash );
+  ledcWrite(pin, duty);
+  digitalWrite(YellowPin, LOW);
+}
+
+void Task_LED_Flash(void *pvParameters) {
+  const int ledInterval = 250; // Interval in milliseconds (4 Hz = 250ms on, 250ms off)
+  bool ledState1 = false;
+  bool ledState2 = true;
+
+  pinMode(RedPin_1, OUTPUT); // Ensure the LED pins are set as outputs
+  pinMode(RedPin_2, OUTPUT);
+  digitalWrite(RedPin_1, LOW); // Ensure the LEDs start off
   digitalWrite(RedPin_2, LOW);
-  while (true) { 
-    // Wait until woken up by a notification 
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY); 
-    // Toggle LED states 
-    // Serial.println("LED task");
-    ledState1 = !ledState1; 
-    digitalWrite(RedPin_1, ledState1); 
-    ledState2 = !ledState2; 
-    digitalWrite(RedPin_2, ledState2); 
+
+  while (true) {
+    // Wait until woken up by a notification
+    //Serial.println("Waiting for notification...");
+    //ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    //Serial.println("Notification received, toggling LEDs");
+
+    // Toggle LED states
+    ledState1 = !ledState1;
+    digitalWrite(RedPin_1, ledState1);
+    ledState2 = !ledState2;
+    digitalWrite(RedPin_2, ledState2);
     vTaskDelay(pdMS_TO_TICKS(ledInterval));
-    // Toggle LED states again 
-    ledState1 = !ledState1; 
-    digitalWrite(RedPin_1, ledState1); 
-    ledState2 = !ledState2; 
-    digitalWrite(RedPin_2, ledState2); 
+
+    // Toggle LED states again
+    ledState1 = !ledState1;
+    digitalWrite(RedPin_1, ledState1);
+    ledState2 = !ledState2;
+    digitalWrite(RedPin_2, ledState2);
     vTaskDelay(pdMS_TO_TICKS(ledInterval));
-  } 
+  }
 }
+
 // Task 1 function 
 void Keypad_Read(void *pvParameters) {
   
@@ -156,7 +175,7 @@ void Keypad_Read(void *pvParameters) {
   unsigned long Start_Time;
 
   // Create the timeout timer (10 seconds) 
-  Keypad_Timeout_Timer = xTimerCreate("TimeoutTimer", pdMS_TO_TICKS(10000), pdFALSE, 0, TimeoutCallback);
+  Keypad_Timeout_Timer = xTimerCreate("TimeoutTimer", pdMS_TO_TICKS(8000), pdFALSE, 0, TimeoutCallback);
 
   // Keypad layout (row-major order)
   char keypad[4][4] = {
@@ -212,6 +231,7 @@ void Keypad_Read(void *pvParameters) {
     Input_Key_Code[Valid_Input_Presses] = key; 
     if(Valid_Input_Presses == 0){
       xTimerStart(Keypad_Timeout_Timer, 0);
+      digitalWrite(PurplePin, HIGH);
     }
     Valid_Input_Presses++; 
     Serial.print("Key pressed: "); 
@@ -219,12 +239,14 @@ void Keypad_Read(void *pvParameters) {
 
       if(Valid_Input_Presses == 6){
         Valid_Input_Presses = 0;
-        Serial.println("I'm here");
+        digitalWrite(PurplePin, LOW);
         xTimerStop(Keypad_Timeout_Timer, 0);
         if(strncmp((const char*)Input_Key_Code, Admin, 6) == 0){
           Serial.println("Right admin code");
           vTaskSuspend(LED_Flash);
           ledcWrite(PinkPin, 0);
+          ledcWrite(BluePin, 0);
+          ledcWrite(GreenPin, 0);
           digitalWrite(YellowPin, HIGH);
           digitalWrite(RedPin_1, LOW); 
           digitalWrite(RedPin_2, LOW);
@@ -268,7 +290,8 @@ void RX_Message_Process(void *pvParameters) {
       memset(RX_Message_Payload, 0, sizeof(RX_Message_Payload));
       Addressee = Decode_Message(receivedMessage, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
       // Process received message
-
+      Serial.print("Sent from node of type: ");
+      Serial.println(Sender_Node_Type);
       if((Addressee == MQTT_Address) && (I_am_Forwarder)) {
         // parse message into correct mqtt message struct 
         Forward_To_MQTT = true;  //set flag for mqtt thread
@@ -277,7 +300,9 @@ void RX_Message_Process(void *pvParameters) {
         
       }
       if(Sender_Node_Type == Fire_Node){
+        Serial.println("It's a fire node");
         if(strcmp((const char*)RX_Message_Payload, "Fire Call") == 0){
+          Serial.println("It's a call event");
           Set_Alarm(PinkPin, Pduty);
         }
         else if (strcmp((const char*)RX_Message_Payload, "Heat Alarm") == 0){
@@ -326,13 +351,10 @@ void IRAM_ATTR onUartRx() {
 void TimeoutCallback(TimerHandle_t xTimer) { 
   Serial.println("Timeout occurred. Resetting Valid_Input_Presses."); 
   Valid_Input_Presses = 0; 
+  digitalWrite(PurplePin, LOW);
 }
 
-void Set_Alarm(uint8_t pin, uint32_t duty){
-  xTaskNotifyGive(LED_Flash);
-  ledcWrite(pin, duty);
-  digitalWrite(YellowPin, LOW);
-}
+
 // // PWM configuration
 // const int pwmFrequency = 5000; // Frequency in Hz
 // const int pwmResolution = 8;   // Resolution in bits
