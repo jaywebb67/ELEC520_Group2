@@ -42,9 +42,10 @@ struct Set_Up_Pins {
   uint16_t CE;
   uint16_t Monitor;
 };
-        
+
+extern uint8_t Location;
 extern uint8_t Home_Address;
-extern const uint8_t Home_Node_Type;
+extern uint8_t Home_Node_Type;
 extern uint8_t Destination_Address;
 extern uint8_t Sender_Address;
 extern volatile bool Bus_Busy;

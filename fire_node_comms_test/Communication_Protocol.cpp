@@ -137,8 +137,8 @@ void Print_Message(unsigned char* message, unsigned char length) {
 // }
 
 unsigned char Decode_Message(unsigned char* message, unsigned char* Sender_Address, unsigned char* Sender_Node_Type, unsigned char* payload) {
-  // Serial.print("RX_Message: ");
-  // Print_Message(message, 7 + message[4]);
+  Serial.print("RX_Message: ");
+  Print_Message(message, 7 + message[4]);
 
   if (message[0] != START_BYTE || message[6 + message[4]] != END_BYTE) {
     Serial.println("Invalid start or end byte");

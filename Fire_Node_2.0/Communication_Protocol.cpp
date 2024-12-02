@@ -1,5 +1,5 @@
 #include "Communication_Protocol.h"
-#include "Node_Config.h"
+
 //.cpp v 2.3
 
 struct Set_Up_Pins Nano = {RX_Pin_A, TX_Pin_A, Max485_CE, Bus_Monitor_Pin};
@@ -39,6 +39,7 @@ unsigned char Ack_message[9] = {
   '\0' // Null-terminator if needed 
   };
 
+uint8_t Location;
 uint8_t Sender_Address;
 uint8_t Sender_Node_Type;
 uint8_t Addressee;
@@ -58,6 +59,8 @@ void Transmit_To_Bus(struct TX_Payload* data, unsigned char* message){
     RS485Serial.flush();  //only required for ESP32 forces the cpu to block on the sending
     #endif
     digitalWrite(Max485_CE, LOW);
+    Serial.print("TX_Message: ");
+    Print_Message(message, 7 + message[4]);
   }
 }
 
@@ -85,8 +88,8 @@ void Comms_Set_Up(){
   RS485Serial.onReceive(onUartRx); // Attach the interrupt handler
   #endif
   attachInterrupt(digitalPinToInterrupt(Bus_Monitor_Pin), Bus_Monitor_Pin_interrupt, CHANGE);
-  delay(1000);
-  Introduction();
+  // delay(1000);
+  // Introduction();
 }
 
 
@@ -94,36 +97,70 @@ void Comms_Set_Up(){
    function returns the intended recipiant address*/
 unsigned char Read_Serial_Port() {
   int index = 0;
-  // Clear RX_Message buffer, Forward buffer and RX_Message_Payload buffer to prevent message overlaps
+  bool startByteFound = false;
+  bool endByteFound = false;
+
+  // Clear RX_Message buffer, Forward buffer, and RX_Message_Payload buffer to prevent message overlaps
   memset(RX_Message, 0, sizeof(RX_Message));
   memset(Forward, 0, sizeof(Forward));
-  // Clear 
   memset(RX_Message_Payload, 0, sizeof(RX_Message_Payload));
 
-  // Read bytes until end byte (0x03) is found
+  // Read bytes until the complete message with start and end bytes is found
   while (RS485Serial.available()) {
     char incomingByte = RS485Serial.read();
-    RX_Message[index++] = incomingByte;
-    Forward[index++] = incomingByte;
+    Serial.print("Received byte: 0x");
+    Serial.println(incomingByte, HEX);
 
-    // Check for buffer overflow
-    if (index >= sizeof(RX_Message) - 1) {
-      Serial.println("Buffer overflow");
-      break;
-    }
-
-    // Check for end byte
-    if (incomingByte == 0x03) {
-      break;
+    if (incomingByte == 0x02) {
+      // Reset buffers and start from the beginning if the start byte is found
+      memset(RX_Message, 0, sizeof(RX_Message));
+      memset(Forward, 0, sizeof(Forward));
+      index = 0;
+      startByteFound = true;
+      endByteFound = false;
+      RX_Message[index] = incomingByte;
+      Forward[index] = incomingByte;
+      index++;
+    } else if (incomingByte == 0x03) {
+      if (startByteFound) {
+        RX_Message[index] = incomingByte;
+        Forward[index] = incomingByte;
+        index++;
+        endByteFound = true;
+        break;
+      }
+    } else if (startByteFound && incomingByte != 0x00) {
+      RX_Message[index] = incomingByte;
+      Forward[index] = incomingByte;
+      index++;
+      // Check for buffer overflow
+      if (index >= sizeof(RX_Message) - 1) {
+        Serial.println("Buffer overflow");
+        break;
+      }
     }
   }
+
+  if (!endByteFound) {
+    Serial.println("Invalid start or end byte");
+  }
+
   // Null-terminate the string
   RX_Message[index] = '\0';
   Forward[index] = '\0';
-  // Process the message
-  unsigned char address = Decode_Message(RX_Message, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
+
+  // Process the message if both start and end bytes were found
+  unsigned char address = 0;
+  if (startByteFound && endByteFound) {
+    address = Decode_Message(RX_Message, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
+  } else {
+    Serial.println("Message was not processed due to incomplete start/end bytes");
+  }
+
   return address;
 }
+
+
 
 
 //Function to send acknowledgement byte as a reply
@@ -183,6 +220,8 @@ void Assemble_Message(struct TX_Payload* data, unsigned char* message) {
 unsigned char Decode_Message(unsigned char* message, unsigned char* Sender_Address, unsigned char* Sender_Node_Type, unsigned char* payload) {
   if (message[0] != START_BYTE || message[6 + message[4]] != END_BYTE) {
     Serial.println("Invalid start or end byte");
+    Serial.print("RX_Message: ");
+    Print_Message(message, 7 + message[4]);
     return 0; // Error: Invalid start or end byte
   }
 
