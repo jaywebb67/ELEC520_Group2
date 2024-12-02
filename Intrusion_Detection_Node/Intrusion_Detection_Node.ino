@@ -2,13 +2,13 @@
 #include "Communication_Protocol.h"
 
 #define RedPin    5
-#define GreenPin  9
 #define YellowPin 10
 #define trigPin   6
 #define echoPin   7
 #define mSensPin  8
 
-//const uint8_t Home_Node_Type = 0x32;
+uint8_t Location;
+uint8_t Home_Node_Type = 0x32;
 uint8_t Home_Address = 0x0F;    //Default address for initial set up
 uint8_t Destination_Address = 0xFF;   //Default address for initial set up
 uint8_t Node_3 = 0x33;
@@ -83,49 +83,62 @@ void setup() {
 // called on repeat
 void loop() {
   uint32_t Sampling_Period = 5000;
+  uint32_t Flash_Freq = 500;
+  unsigned long Lost_Time = 0;
   unsigned long Past_Time = 0;
   bool Occupied = false;
+  bool ledState = false;
   while(true) {
     if(RS485Serial.available()){
       Addressee = Read_Serial_Port();
 
       if(Addressee == Home_Address){
+        if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
+          Transmit_To_Bus(&Alive);
+        } 
         Serial.println((char*)RX_Message_Payload);
         Serial.print("Sender's address: ");
         Serial.println(Sender_Address, HEX);
         Serial.print("Sender is a node of type: ");
         Serial.println(Sender_Node_Type, HEX);
+      }
         // Handle specific commands
-        if (strcmp((char*)RX_Message_Payload, User_Cmd) == 0) {
-          Occupied = true;
-          digitalWrite(GreenPin, HIGH);
+      else if(Addressee == Location){
+         if (strcmp((char*)RX_Message_Payload, User_Cmd) == 0) {
+        Occupied = true;
+        digitalWrite(YellowPin, LOW);
         }
         else if (strcmp((char*)RX_Message_Payload, No_User_Cmd) == 0) {
           Occupied = false;
-          digitalWrite(GreenPin, LOW);
           digitalWrite(YellowPin, HIGH);
         }
-        else if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
-          Transmit_To_Bus(&Alive);
-        } 
       }
     }
 
     if(!Occupied) {
-      unsigned long Current_Time = millis();
+      Current_Time = millis();
       UltraSonic();
       AccXYZ();
       MotionSensor();
       if (imuAlert || ultraSonicAlert || mSensValue){
-        if(Current_Time-Past_Time >= Sampling_Period){
+        if(Current_Time-Lost_Time >= Sampling_Period){
           digitalWrite(RedPin, HIGH);  
           Transmit_To_Bus(&Intrusion);  
           imuAlert = false;
           ultraSonicAlert = false;
+          Lost_Time = Current_Time;
         } 
       }
       else {
         digitalWrite(RedPin, LOW);
+      }
+    }
+    else {
+      unsigned long Current_Occ_Time = millis();
+      if((Current_Occ_Time - Past_Time)>= Flash_Freq){
+        ledState = !ledState; 
+        digitalWrite(YellowPin, ledState); 
+        Past_Time = Current_Occ_Time;
       }
     }
   }
