@@ -7,7 +7,6 @@
 char Valid_Code[7] = {"012345"};
 char receivedCode[7];
 bool codeReceived = false;
-//char response;
 uint8_t response;
 volatile uint32_t counter = 0;
 
