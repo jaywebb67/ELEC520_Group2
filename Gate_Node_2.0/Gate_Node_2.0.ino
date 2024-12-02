@@ -1,4 +1,4 @@
-//#include <BluetoothSerial.h>
+#include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include "Communication_Protocol.h"
 #include "LCD_Manager.h"
@@ -7,9 +7,7 @@
 #include "driver/gpio.h"
 
 #define DEVICE_NAME "Gate 1"
-
-//BluetoothSerial //SerialBT;
-
+#define I2C_SLAVE_ADDRESS 0x03
 //const uint8_t Home_Node_Type = 0x35;
 uint8_t Home_Address = 0x13;
 uint8_t Destination_Address = 0x28;
@@ -23,6 +21,8 @@ const int colPins[4] = {23, 25, 26, 27};     // Column pins connected to the key
 char Input_Key_Code[7];
 char BT_Key_Code[7];
 char Start_Pass[7] = {"012345"};
+char receivedCode[7];
+volatile bool codeReceived = false;
 // volatile unsigned char buffer[MESSAGE_LENGTH];
 // volatile unsigned char bufferIndex = 0;
 volatile uint32_t bytes_Received = 0;
@@ -49,96 +49,34 @@ void TimeoutCallback(TimerHandle_t xTimer) {
   Send_To_LCD_Queue(Enter_Mess);
 }
 
+//alternative keypad ISR more stable but wrong in every way
 void IRAM_ATTR Key_Pressed_ISR() {
-  if(!isPressed) {
+  unsigned long interruptTime = millis();
+  // Debounce logic
+  if ((interruptTime - lastInterruptTime > debounceDelay) && !isPressed) {
+    isPressed = true;
+    keypresses++;
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     vTaskNotifyGiveFromISR(Keypad_Reader, &xHigherPriorityTaskWoken);
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
   }
+  lastInterruptTime = interruptTime;
 }
 
-// //alternative keypad ISR more stable but wrong in every way
-// void IRAM_ATTR Key_Pressed_ISR() {
-//   unsigned long interruptTime = millis();
-//   // Debounce logic
-//   if ((interruptTime - lastInterruptTime > debounceDelay) && !isPressed) {
-//     isPressed = true;
-//     keypresses++;
-//     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-//     vTaskNotifyGiveFromISR(Keypad_Reader, &xHigherPriorityTaskWoken);
-//     portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
-//   }
-//   lastInterruptTime = interruptTime;
-// }
 
-// void onBluetoothDataReceived(const uint8_t *data, size_t len) {
-//   Serial.print("Received data length: ");
-//   Serial.println(len);
-
-//   uint32_t validBytesReceived = 0; // Counter for valid characters
-
-//   // Copy received data to global buffer while filtering out control characters
-//   for (size_t i = 0; i < len && validBytesReceived < sizeof(BT_Key_Code) - 1; i++) {
-//     if (data[i] != '\r' && data[i] != '\n') { // Ignore newline and carriage return characters
-//       BT_Key_Code[validBytesReceived++] = data[i];
-//     }
-//   }
-//   BT_Key_Code[validBytesReceived] = '\0'; // Null-terminate the string
-
-//   bytes_Received = (len-2); // Update bytes_Received with the count of valid characters
-
-//   Serial.print("Filtered data length: ");
-//   Serial.println(bytes_Received);
-
-//   // Check if total characters received, including control characters, exceed 6
-//   if (validBytesReceived != 6) {
-//     Serial.println("Invalid Code");
-//     //SerialBT.println("Invalid Code");
-//   } else {
-//     // Notify the Bluetooth task
-//     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-//     vTaskNotifyGiveFromISR(Bluetooth_Task_Handle, &xHigherPriorityTaskWoken);
-//     portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
-//   }
-// }
-
-
-void notify_User(int x, int y) {
+void notify_User(int x) {
+  // Keypad thread call
   switch (x) {
-    case 1:     // Bluetooth thread call
-      switch (y) {
-        case 1:
-          //SerialBT.println("Access Denied");
-          break;
-        case 2:
-          //SerialBT.println("Access Granted");
-          break;
-        case 3:
-          //SerialBT.println("Toodle Pip");
-          break;
-        default:
-          //SerialBT.println("I Need A COFFEE");
-          break;
-      }
+    case 1:
+      Send_To_LCD_Queue(Access_D);
       break;
-    case 2:     // Keypad thread call
-      switch (y) {
-        case 1:
-          Send_To_LCD_Queue(Access_D);
-          break;
-        case 2:
-          Send_To_LCD_Queue(Access_G);
-          break;
-        case 3:
-          Send_To_LCD_Queue(Bye);
-          break;
-        default:
-          Send_To_LCD_Queue(Broken);
-          break;
-      }
+    case 2:
+      Send_To_LCD_Queue(Access_G);
+      break;
+    case 3:
+      Send_To_LCD_Queue(Bye);
       break;
     default:
-      //SerialBT.println("I Need A COFFEE");
       Send_To_LCD_Queue(Broken);
       break;
   }
@@ -391,16 +329,16 @@ void setup() {
   //put in initial value for testing
   Valid_Entrance_Codes.addEntry(Start_Pass);
   Valid_Entrance_Codes.printBuffer();
-  // Create Task 2 (runs on Core 0)
-  // xTaskCreatePinnedToCore(
-  //    Process_BT_Message,        // Function to implement the task
-  //   "Process_BT_Message",     // Name of the task
-  //   10000,                    // Stack size in words
-  //   NULL,                     // Task input parameter
-  //   3,                        // Priority of the task
-  //   &Bluetooth_Task_Handle,   // Task handle
-  //   0                         // Core where the task should run
-  // );
+  Create Task 2 (runs on Core 0)
+  xTaskCreatePinnedToCore(
+     Process_BT_Message,        // Function to implement the task
+    "Process_BT_Message",     // Name of the task
+    10000,                    // Stack size in words
+    NULL,                     // Task input parameter
+    3,                        // Priority of the task
+    &Bluetooth_Task_Handle,   // Task handle
+    0                         // Core where the task should run
+  );
 
   // Create task 3 (rus on core 0)
   xTaskCreatePinnedToCore(
@@ -423,17 +361,7 @@ void setup() {
     &LCD_Thread_Handle,                //Task handle to keep track of created task 
     0                           //pin task to core 0
   );
-  
-  // Initialize BluetoothSerial and set up the callback 
-  //SerialBT.onData(onBluetoothDataReceived);
-  //SerialBT.begin(DEVICE_NAME);
-  //Serial.println("The device started, now you can pair it with Bluetooth!");
-
-  // Attach the interrupt to the Bluetooth serial available method
-  //attachInterrupt(digitalPinToInterrupt(SerialBT.available()), Bluetooth_ISR, RISING);
-  // Initialize BluetoothSerial and set up the callback SerialBT.onData(onBluetoothDataReceived);
  
-
   // Attach UART interrupt 
   RS485Serial.onReceive(onUartRx); // Attach the interrupt handler
 
