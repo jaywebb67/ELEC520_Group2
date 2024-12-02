@@ -152,10 +152,6 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     for (int i = 0; i < length; i++) {
         msg.payload += (char)payload[i];
     }
-    // Serial.print("Received topic: ");
-    // Serial.println(msg.topic);
-    // Serial.print("Received payload: ");
-    // Serial.println(msg.payload);
     if (xQueueSend(messageQueue, &msg, portMAX_DELAY) != pdTRUE) {
         Serial.println("Failed to send message to queue");
     }
@@ -170,9 +166,7 @@ void mqttHandler(void* pvParameters) {
     // Check if there’s a message in the queue
     if (xQueueReceive(messageQueue, &receivedMsg, portMAX_DELAY) == pdTRUE) {
 
-      // Add additional processing code here if needed
       // Check if the message is for adding a new user credential
-
       if (receivedMsg.topic == "ELEC520/users/view") {
         // Clear the file at the start when viewing/updating users from database
         File file = LittleFS.open("/userCredentials.txt", "w");

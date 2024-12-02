@@ -9,8 +9,8 @@
 #define DEVICE_NAME "Gate 1"
 #define I2C_SLAVE_ADDRESS 0x03
 //const uint8_t Home_Node_Type = 0x35;
-uint8_t Home_Address = 0x13;
-uint8_t Destination_Address = 0x28;
+uint8_t Home_Address = 0x28;
+uint8_t Destination_Address = 0x13;
 
 bool alarmEnabled = true;
 
