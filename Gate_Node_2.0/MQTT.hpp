@@ -14,6 +14,11 @@ extern WiFiClientSecure client;
 extern PubSubClient mqttClient;
 
 extern TaskHandle_t mqttTaskHandle;
+extern TaskHandle_t mqttReceiveHandle;
+
+
+extern QueueHandle_t mqttPublishQueue;
+
 
 extern bool restartFlag;
 extern String clientId;
@@ -31,6 +36,8 @@ struct MqttMessage {
 void MQTT_SetUp();
 
 void MQTT_task(void* pvParameters);
+
+void mqttPublisher(void* parameter);
 
 void reconnect(bool onSetUp);
 

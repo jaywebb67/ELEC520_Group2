@@ -32,12 +32,45 @@ void CharBuffer::addEntry(const char* entry) {
 // Function to search for an entry in the buffer
 int CharBuffer::searchEntry(const char* entry) {
   for (int i = 0; i < Index; i++) {
-    if (strncmp(buffer[i], entry, Buff_Width) == 0) {
-      return i; // Return the index if the entry is found
+    // Find the colon (:) in the buffer entry to locate the password
+    const char* colonPosition = strchr(buffer[i], ':');
+    if (colonPosition != nullptr) {
+      // Move the pointer to the character after the colon
+      const char* passwordPart = colonPosition + 1;
+
+      // Compare only the password part with the input entry
+      if (strncmp(passwordPart, entry, 6) == 0) {
+        return i; // Return the index if the password matches
+      }
     }
   }
   return -1; // Return -1 if the entry is not found
 }
+
+char* CharBuffer::findUsername(int idx) {
+  if (idx < 0 || idx >= Index) {
+    return nullptr; // Return nullptr if index is out of bounds
+  }
+  // Find the position of the colon in the entry
+  const char* colonPosition = strchr(buffer[idx], ':');
+  if (colonPosition == nullptr) {
+    return nullptr; // Return nullptr if no colon is found (malformed entry)
+  }
+  // Calculate the length of the username
+  int usernameLength = colonPosition - buffer[idx];
+
+  // Allocate memory for the username (add 1 for the null terminator)
+  char* username = new char[usernameLength + 1];
+
+  // Copy the username part into the allocated memory
+  strncpy(username, buffer[idx], usernameLength);
+  
+  // Null-terminate the username string
+  username[usernameLength] = '\0';
+  
+  return username; // Return the username
+}
+
 
 // Function to delete an entry and realign the buffer
 void CharBuffer::deleteEntry(int index) {

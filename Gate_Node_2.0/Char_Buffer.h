@@ -23,6 +23,8 @@ class CharBuffer {
     // Function to search for an entry in the buffer
     int searchEntry(const char* entry);
 
+    char* findUsername(int idx);
+
     // Function to delete an entry and realign the buffer
     void deleteEntry(int index);
 

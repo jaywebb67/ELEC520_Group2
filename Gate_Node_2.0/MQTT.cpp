@@ -1,13 +1,15 @@
 #include "MQTT.hpp"
 
-// WiFi credentials
-QueueHandle_t mqttMessageQueue;
-
 String clientId = "";
 String ping = "";
 bool restartFlag = false;
 
 TaskHandle_t mqttTaskHandle = NULL;
+TaskHandle_t mqttPublishHandle = NULL;
+TaskHandle_t mqttReceiveHandle = NULL;
+
+QueueHandle_t mqttPublishQueue;
+QueueHandle_t mqttMessageQueue;
 
 // Create a CharBuffer object with 10 entries, each of size 6 characters 
 CharBuffer Valid_Entrance_Codes(100, 15);
@@ -20,10 +22,13 @@ PubSubClient mqttClient(client);
 const char* mqttServer = "40c06ef97ec5427eb54aa49e5c03c12c.s1.eu.hivemq.cloud";
 const uint16_t mqttPort = 8883;
 
-// WiFi setup
+// WiFi credentials
 const char* ssid = "BT-CJC2PH";//"Jay's WiFi";
 const char* password = "NfECRbGtfV37Hd";//"jaywebb1";//
+
+//topic for recieving user credential updates
 String usersTopic = "";
+
 // ISRG Root X1 certificate (PEM format)
 const char* isrg_root_x1_cert = R"literal(-----BEGIN CERTIFICATE-----
 MIIFBjCCAu6gAwIBAgIRAIp9PhPWLzDvI4a9KQdrNPgwDQYJKoZIhvcNAQELBQAw
@@ -105,7 +110,23 @@ void MQTT_SetUp(){
         Serial.println("Failed to create mqttMessageQueue!");
         while (true); // Halt execution
     }
-    xTaskCreatePinnedToCore(mqttHandler, "mqttHandler", 5000, NULL, 1, &mqttTaskHandle, 1);
+
+    mqttPublishQueue = xQueueCreate(10, 100); 
+
+    // Check if the queue was created successfully
+    if (mqttPublishQueue == NULL) {
+      Serial.println("Failed to create MQTT publish queue");
+      while (1); // Stop execution
+    }
+
+    xTaskCreatePinnedToCore(mqttPublisher, "mqttPublisher", 5000, NULL, 1, &mqttPublishHandle, 1);
+    if (mqttTaskHandle == NULL) {
+        Serial.println("Failed to create mqttHandler task.");
+    } else {
+        Serial.println("mqttHandler task created successfully.");
+    }
+
+    xTaskCreatePinnedToCore(mqttHandler, "mqttHandler", 5000, NULL, 1, &mqttReceiveHandle, 1);
     if (mqttTaskHandle == NULL) {
         Serial.println("Failed to create mqttHandler task.");
     } else {
@@ -115,23 +136,69 @@ void MQTT_SetUp(){
 
 
 void MQTT_task(void* pvParameters) {
-    reconnect(1);   
+    reconnect(1); // Initial connection attempt
     unsigned long lastPingTime = millis();
-    unsigned long lastConnectionTime = millis();
-    while (true) {
-        if (restartFlag) esp_restart();
+    unsigned long lastConnectionAttempt = millis();
 
-        // Send ping message every 10 seconds
-        if (millis() - lastPingTime >= 10000) {
-            lastPingTime = millis();
-            if (!mqttClient.publish("ELEC520/devicePing", ping.c_str())) {
-        //        Serial.println("Failed to send ping message");
-            }
-            mqttClient.loop(); 
+    while (true) {
+        if (restartFlag) {
+            esp_restart(); // Restart the ESP if the restart flag is set
         }
-        
+
+        // Check if MQTT client is connected
+        if (mqttClient.connected()) {
+            // Send ping message every 10 seconds
+            if (millis() - lastPingTime >= 10000) {
+                lastPingTime = millis();
+                if (!mqttClient.publish("ELEC520/devicePing", ping.c_str())) {
+                    // Uncomment for debugging
+                    // Serial.println("Failed to send ping message");
+                }
+                mqttClient.loop(); // Ensure MQTT client processes incoming messages
+            }
+        } else {
+            // Retry reconnection every 5 minutes
+            if (millis() - lastConnectionAttempt >= 300000) { // 5 minutes
+                lastConnectionAttempt = millis();
+                reconnect(1); // Attempt to reconnect
+            }
+        }
     }
 }
+
+
+void mqttPublisher(void* parameter) {
+  MqttMessage message; // Create a struct instance to hold topic and payload
+
+  while (true) {
+    // Wait for an MqttMessage from the queue
+    if (xQueueReceive(mqttPublishQueue, &message, portMAX_DELAY) == pdPASS) {
+      // Publish the payload to the specified MQTT topic
+      if(message.topic == "ELEC520/userAccess"){
+        String payload = message.payload +" "+ clientId;
+        mqttClient.publish(message.topic.c_str(), payload.c_str());
+        // Log the published message
+        Serial.print("Published to topic: ");
+        Serial.print("ELEC520/userAccess");
+        Serial.print(" | Payload: ");
+        Serial.println(message.payload);
+      }
+      else{
+        mqttClient.publish(message.topic.c_str(), message.payload.c_str());
+        // Log the published message
+        Serial.print("Published to topic: ");
+        Serial.print(message.topic.c_str());
+        Serial.print(" | Payload: ");
+        Serial.println(message.payload);
+      }
+
+    }
+  }
+}
+
+
+
+
 
 void reconnect(bool onSetUp) {
     if(WiFi.status() != WL_CONNECTED){
