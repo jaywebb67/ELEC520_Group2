@@ -2,10 +2,15 @@
 #include "DHT.h"
 #include "Node_Config.h"
 
+#define DHTPIN 5     // what pin we're connected to
+#define DHTTYPE DHT22   // DHT 22  (AM2302)
+#define Alarm_Pin 3 
+#define Sensor_Read_Interval  2000
+#define RedPin  7
 
    //need to send location byte may need to be variable to fit in struct
-
-const uint8_t Home_Node_Type = 0x32;
+uint8_t Location;
+uint8_t Home_Node_Type = 0x32;
 uint8_t Home_Address = 0x0F;    //Default address for initial set up
 uint8_t Destination_Address = 0xFF;   //Default address for initial set up
 uint8_t Node_3 = 0x33;
@@ -13,13 +18,14 @@ const char Respond_Cmd[7] = "RESPOND";
 const char Reset_Cmd[6] = "RESET";
 volatile bool alarm_Pressed = false;
 String LED = "LED";
-const uint32_t Max_Temp = 40;
+const uint32_t Max_Temp = 45;
+unsigned long Last_Time = 0;
 
 
-const struct TX_Payload Fire_1 = {21, "Call button activated"};
+const struct TX_Payload Fire_1 = {9, "Fire Call"};
 const struct TX_Payload Fire_2 = {12, "Sensor error"};
-const struct TX_Payload Fire_3 = {21, "Fire sensor activated"};
-const struct TX_Payload Fire_4 = {19, "Nothing to see here"};
+const struct TX_Payload Fire_3 = {10, "Heat Alarm"};
+const struct TX_Payload Alive = {8, "I'm here"};
 struct TX_Payload Hello = {2, "Hi"};
 
 DHT dht(DHTPIN, DHTTYPE);
@@ -47,6 +53,7 @@ void Test_Heat_Sensor() {
   if (t > Max_Temp) {
     Serial.println("Maximum allowable temperature exceeded");
     Transmit_To_Bus(&Fire_3);
+    digitalWrite(RedPin, HIGH);
   }
 }
 
@@ -54,7 +61,7 @@ void setup() {
   Serial.begin(9600);
   Comms_Set_Up();
   pinMode(Alarm_Pin, INPUT);
-  pinMode(LED_B, OUTPUT);
+  pinMode(RedPin, OUTPUT);
   dht.begin();
   attachInterrupt(digitalPinToInterrupt(Alarm_Pin),alarm_Pressed_interrupt, FALLING);
   alarm_Pressed = false;
@@ -64,7 +71,7 @@ void loop() {
   if(RS485Serial.available()){
     Addressee = Read_Serial_Port();
   
-  if(Addressee == Home_Address){
+    if(Addressee == Home_Address){
       Serial.println((char*)RX_Message_Payload);
       Serial.print("Sender's address: ");
       Serial.println(Sender_Address, HEX);
@@ -73,9 +80,10 @@ void loop() {
       // Handle specific commands
       if (strcmp((char*)RX_Message_Payload, Reset_Cmd) == 0) {
         alarm_Pressed = false;
+        digitalWrite(RedPin, LOW);
       }
       if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
-        Transmit_To_Bus(&Fire_4);
+        Transmit_To_Bus(&Alive);
       }
     }
     else if((Sender_Address == Node_3)&&(Addressee == Home_Address )){
@@ -94,18 +102,12 @@ void loop() {
   if (alarm_Pressed) {
   Serial.println("Fire alarm triggered");
   Transmit_To_Bus(&Fire_1);
+  digitalWrite(RedPin, HIGH);
   }
 
   unsigned long Current_Time = millis();
   if(Current_Time - Last_Time >= Sensor_Read_Interval) {
     Test_Heat_Sensor();
-  }
-  
-
-  int x = random(1, 100);
-  if(x>90){
-    Destination_Address = 0x33;
-    Transmit_To_Bus(&Hello);
-    Destination_Address = 0x28;
+    Last_Time = Current_Time;
   }
 }
