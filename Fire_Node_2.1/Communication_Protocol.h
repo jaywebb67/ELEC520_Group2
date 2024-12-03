@@ -11,11 +11,10 @@ extern SoftwareSerial RS485Serial;
 #include <HardwareSerial.h>
  extern HardwareSerial RS485Serial;
  extern QueueHandle_t RX_Queue;
- extern TaskHandle_t RX_Message_Handle;
 #endif
 
+  
 
-#define Home_Node_Type      0x32
 #define START_BYTE          0x02
 #define END_BYTE            0x03
 #define ENQ                 0X05
@@ -45,10 +44,8 @@ struct Set_Up_Pins {
 };
         
 extern uint8_t Home_Address;
-extern uint8_t Intrusion_Address;
-extern uint8_t Fire_Address;
+extern const uint8_t Home_Node_Type;
 extern uint8_t Destination_Address;
-extern uint8_t Location;
 extern uint8_t Sender_Address;
 extern volatile bool Bus_Busy;
 extern bool Safe_To_Transmit;
@@ -64,15 +61,15 @@ extern uint8_t Sender_Node_Type;
 extern uint8_t Addressee;
 extern uint8_t Sender_Node_Type;
 extern const struct TX_Payload Intro;
-extern volatile unsigned char RX_buffer[MESSAGE_LENGTH];
-extern volatile unsigned char RX_bufferIndex;
+extern volatile unsigned char buffer[MESSAGE_LENGTH];
+extern volatile unsigned char bufferIndex;
 
 
 
 void Print_Message(unsigned char* message, unsigned char length);
-unsigned char Calculate_Checksum(const struct TX_Payload* data);
-void Assemble_Message(const struct TX_Payload* data, unsigned char* message);
-void Transmit_To_Bus(const struct TX_Payload* data, unsigned char* message = TX_Message);
+unsigned char Calculate_Checksum(struct TX_Payload* data);
+void Assemble_Message(struct TX_Payload* data, unsigned char* message);
+void Transmit_To_Bus(struct TX_Payload* data, unsigned char* message = TX_Message);
 unsigned char Calculate_RX_Checksum(unsigned char* data, unsigned char length);
 unsigned char Decode_Message(unsigned char* message, unsigned char* Sender_Address, unsigned char* Sender_Node_Type, unsigned char* payload);
 bool Clear_To_Send();

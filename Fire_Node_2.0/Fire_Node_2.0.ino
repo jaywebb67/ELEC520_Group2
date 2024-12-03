@@ -1,6 +1,5 @@
-#include <DHT.h>
 #include "Communication_Protocol.h"
-#include "Node_Config.h"
+#include "DHT.h"
 
 #define DHTPIN 5     // what pin we're connected to
 #define DHTTYPE DHT22   // DHT 22  (AM2302)
@@ -12,8 +11,8 @@
 //need to send location byte may need to be variable to fit in struct
 uint8_t Location;
 uint8_t const Home_Node_Type = 0x32;
-uint8_t Home_Address = 0x0F;    //Default address for initial set up
-uint8_t Destination_Address = 0xFF;   //Default address for initial set up
+uint8_t Home_Address = 0x28;    //Default address for initial set up
+uint8_t Destination_Address = 0x13;   //Default address for initial set up
 uint8_t Node_3 = 0x33;
 const char Respond_Cmd[8] = "RESPOND";
 const char Reset_Cmd[6] = "RESET";
@@ -33,6 +32,7 @@ DHT dht(DHTPIN, DHTTYPE);
 
 void alarm_Pressed_interrupt() {
   alarm_Pressed = true;
+  Serial.println("ISR");
 }
 
 void Test_Heat_Sensor() {
@@ -42,7 +42,7 @@ void Test_Heat_Sensor() {
   if (isnan(t)) {
     Serial.println("Failed to read from DHT sensor!");
     Serial.println();
-    Transmit_To_Bus((TX_Payload*)&Fire_2);
+    Transmit_To_Bus(&Fire_2);
   }
 
   Serial.print("Temperature read = ");
@@ -53,7 +53,7 @@ void Test_Heat_Sensor() {
   
   if (t > Max_Temp) {
     Serial.println("Maximum allowable temperature exceeded");
-    Transmit_To_Bus((TX_Payload*)&Fire_3);
+    Transmit_To_Bus(&Fire_3);
     digitalWrite(RedPin, HIGH);
   } 
   else {
@@ -100,7 +100,7 @@ void loop() {
       if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
         uint8_t temp = Destination_Address;
         Destination_Address = MQTT_Address;
-        Transmit_To_Bus((TX_Payload*)&Alive);
+        Transmit_To_Bus(&Alive);
         Destination_Address = temp;
       }
     }
@@ -118,7 +118,7 @@ void loop() {
   }
   if (alarm_Pressed) {
       Serial.println("Fire alarm triggered");
-      Transmit_To_Bus((TX_Payload*)&Fire_1);
+      Transmit_To_Bus(&Fire_1);
       digitalWrite(RedPin, HIGH);
   }
   unsigned long Current_Time = millis();

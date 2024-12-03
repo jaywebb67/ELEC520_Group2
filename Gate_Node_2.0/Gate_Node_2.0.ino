@@ -1,5 +1,5 @@
 #include <Wire.h>
-#include <LiquidCrystal_I2C.h>
+#include "I2C_LCD.h"
 #include "Communication_Protocol.h"
 #include "LCD_Manager.h"
 #include "MQTT.hpp"
@@ -7,22 +7,33 @@
 #include "driver/gpio.h"
 
 #define DEVICE_NAME "Gate 1"
-#define I2C_SLAVE_ADDRESS 0x03
-//const uint8_t Home_Node_Type = 0x35;
-uint8_t Home_Address = 0x28;
-uint8_t Destination_Address = 0x13;
+#define I2C_SLAVE_ADDRESS 0x03 // Address of the slave device
+#define SDA_2 5 
+#define SCL_2 0
 
-bool alarmEnabled = true;
+
+struct TX_Q {
+  const struct TX_Payload* message;
+  uint8_t dest;
+};
+
+struct TX_Q TXbuff_0;
+struct TX_Q TXbuff_1;
+const struct TX_Payload No_User_Cmd = {6, "NVuser"};
 
 //ESP32 WROOM pins
 const int rowPins[4] = {18, 19, 13, 32};     // Row pins connected to the keypad
 const int colPins[4] = {23, 25, 26, 27};     // Column pins connected to the keypad
 
 char Input_Key_Code[7];
-char BT_Key_Code[7];
 char Start_Pass[7] = {"012345"};
+//const char User_Cmd[6] = "Vuser";
+const struct TX_Payload User_Cmd = {5, "Vuser"};
+//const char No_User_Cmd[7] = "NVuser";
 char receivedCode[7];
-volatile bool codeReceived = false;
+bool codeReceived = false;
+uint8_t response = 1;
+volatile uint32_t counter = 0;
 // volatile unsigned char buffer[MESSAGE_LENGTH];
 // volatile unsigned char bufferIndex = 0;
 volatile uint32_t bytes_Received = 0;
@@ -36,7 +47,9 @@ TaskHandle_t Keypad_Reader = NULL;
 TaskHandle_t Bluetooth_Task_Handle = NULL; // Task handle for Bluetooth task
 TaskHandle_t LCD_Thread_Handle;
 //TaskHandle_t RX_Message_Handle;
+TaskHandle_t TX_Message_Handle;
 
+QueueHandle_t TX_Queue;
 // Timer handle 
 TimerHandle_t Keypad_Timeout_Timer;
 
@@ -49,13 +62,21 @@ void TimeoutCallback(TimerHandle_t xTimer) {
   Send_To_LCD_Queue(Enter_Mess);
 }
 
+// void IRAM_ATTR Key_Pressed_ISR() {
+//   if(!isPressed) {
+//     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+//     vTaskNotifyGiveFromISR(Keypad_Reader, &xHigherPriorityTaskWoken);
+//     portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
+//   }
+// }
+
 //alternative keypad ISR more stable but wrong in every way
 void IRAM_ATTR Key_Pressed_ISR() {
   unsigned long interruptTime = millis();
   // Debounce logic
   if ((interruptTime - lastInterruptTime > debounceDelay) && !isPressed) {
     isPressed = true;
-    keypresses++;
+    //keypresses++;
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     vTaskNotifyGiveFromISR(Keypad_Reader, &xHigherPriorityTaskWoken);
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
@@ -63,9 +84,47 @@ void IRAM_ATTR Key_Pressed_ISR() {
   lastInterruptTime = interruptTime;
 }
 
+void BluetoothDataReceived(int howMany) {
+  Serial.print("I2C received: ");
+  int i = 0;
+  while (Wire.available() && i < 6) {
+    receivedCode[i] = Wire.read();
+    Serial.print(receivedCode[i]); // Print each received character
+    i++;
+  }
+  receivedCode[i] = '\0'; // Null-terminate the string
+  Serial.print(" Complete code: ");
+  Serial.println(receivedCode); // Print the complete code
+  codeReceived = true;
+  // Notify the Bluetooth task
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  vTaskNotifyGiveFromISR(Bluetooth_Task_Handle, &xHigherPriorityTaskWoken);
+  portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
+  
+}
+void Process_BT_Message(void *pvParameters) {
+  while (true) {
+    // Wait for the notification from ISR 
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    Serial.println("BT task entered");
+
+    if (codeReceived) {
+      Serial.println("Checking code");
+      codeReceived = false;
+      response = Test_Entry_Code(receivedCode); // Check the received code and set the response
+      Serial.print("TEC response: ");
+      Serial.println(response);
+    }
+  }
+}
+void requestEvent() {
+  Serial.print("I2C request. Response: ");
+  Serial.println(response);
+  Wire.write(response);
+  //response = '\0';
+}
 
 void notify_User(int x) {
-  // Keypad thread call
   switch (x) {
     case 1:
       Send_To_LCD_Queue(Access_D);
@@ -162,6 +221,7 @@ int Test_Entry_Code(const char* code) {
 // Task 1 function 
 void Keypad_Read(void *pvParameters) {
   
+  
   unsigned long Start_Time;
 
   // Create the timeout timer (10 seconds) 
@@ -182,7 +242,7 @@ void Keypad_Read(void *pvParameters) {
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY); //wait for flag
 
     isPressed = true;
-    vTaskDelay(pdMS_TO_TICKS(debounceDelay));
+    //vTaskDelay(pdMS_TO_TICKS(debounceDelay));
    
     Serial.println("Entering task 1.");
    
@@ -229,12 +289,12 @@ void Keypad_Read(void *pvParameters) {
       if(Valid_Input_Presses == 6){
         // Process the valid 6-byte code
         int y = Test_Entry_Code(Input_Key_Code);
-        notify_User(2, y);
+        notify_User(y);
         Serial.println(y);
         Serial.println(Input_Key_Code);
         Valid_Input_Presses = 0;
         xTimerStop(Keypad_Timeout_Timer, 0);
-        Send_To_LCD_Queue(Enter_Mess);
+        //Send_To_LCD_Queue(Enter_Mess);
       }
     }
     // Reset row pins to low to reenable the interrupt
@@ -250,28 +310,6 @@ void Keypad_Read(void *pvParameters) {
 }
 
 
-// void Process_BT_Message(void *pvParameters) {
-//   while (true) {
-//     // Wait for the notification from ISR 
-//     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-//     Serial.println("BT task entered");
-
-//     // Check if the length of received data is 6
-//     if (bytes_Received == 6) {
-//       // Process the valid 6-byte code
-//       int y = Test_Entry_Code(BT_Key_Code);
-//       notify_User(1, y);
-//       //SerialBT.println("Valid Code");
-//     } else {
-//       Serial.println("Invalid Code");
-//       //SerialBT.println("Invalid Code");
-//     }
-//     // // Process the valid 6-byte code
-//     // int y = Test_Entry_Code(BT_Key_Code);
-//     // notify_User(1, y);
-//     bytes_Received = 0; // Reset bytes_Received for the next code
-//   }
-// }
 
 // Task 4 function
 void LCD_Thread(void *pvParameters) {
@@ -286,6 +324,30 @@ void LCD_Thread(void *pvParameters) {
   }
 }
 
+void TX_Message_Process(void *pvParameters) {
+  struct TX_Q receivedMessage;
+  while (1) {
+  if (xQueueReceive(TX_Queue, &receivedMessage, portMAX_DELAY)) {
+    uint8_t temp = Destination_Address;
+    Destination_Address = receivedMessage.dest;
+    Transmit_To_Bus(receivedMessage.message);
+    Destination_Address = temp;
+  }
+  }
+}
+void receiveEvent(int howMany) {
+  Serial.print("I2C received: ");
+  int i = 0;
+  while (Wire.available() && i < 6) {
+    receivedCode[i] = Wire.read();
+    Serial.print(receivedCode[i]); // Print each received character
+    i++;
+  }
+  receivedCode[i] = '\0'; // Null-terminate the string
+  Serial.print(" Complete code: ");
+  Serial.println(receivedCode); // Print the complete code
+  codeReceived = true;
+}
 
 void setup() {
  // Start Serial communication
@@ -293,17 +355,29 @@ void setup() {
   //call function to set up correct communication pins and serial port for the board in use
   Comms_Set_Up();
   Serial.println("Hello");
-  LCD_Innit(); 
   MQTT_SetUp();
-  //xTaskCreatePinnedToCore(MQTT_task, "MQTT_task", 10000, NULL, 1, NULL, 1);
+  Wire.begin(I2C_SLAVE_ADDRESS);  // Initialize the I2C bus as a slave
+  Wire.onReceive(BluetoothDataReceived);   // Register the receive event handler
+  //Wire.onReceive(receiveEvent);   // Register the receive event handler
+  Wire.onRequest(requestEvent);   // Register the request event handler
+  // Initialize queue
+  // Initialize I2C as master for LCD 
+  Wire1.begin(SDA_2, SCL_2); // Initialize the I2C bus as a master
 
-  // // Initialize queue
-  // RX_Queue = xQueueCreate(10, MESSAGE_LENGTH * sizeof(char));
-  // if (RX_Queue == NULL) {
-  //     Serial.println("Failed to create RX_Queue!");
-  //     while (true); // Halt execution
-  // }
-  // LCD_Queue = xQueueCreate(10, sizeof(QueueItem));
+  // Initialize the LCD
+  // lcd.begin();
+  // lcd.backlight(); // Turn on the backlight
+  // lcd.print("Hello, World!"); // Print a test message
+
+  LCD_Innit();
+  
+  
+  
+
+  
+   RX_Queue = xQueueCreate(10, MESSAGE_LENGTH * sizeof(char));
+   TX_Queue = xQueueCreate(10, sizeof(TX_Q));
+   LCD_Queue = xQueueCreate(10, sizeof(QueueItem));
   
   // Create Task 1 (runs on Core 0 by default)
   xTaskCreatePinnedToCore(
@@ -315,6 +389,7 @@ void setup() {
     &Keypad_Reader,        // Task handle
     0                    // Core 0
   );
+  
   // Initialize row & column pins 
   for (int i = 0; i < 4; i++) {
     pinMode(rowPins[i], OUTPUT);
@@ -329,7 +404,7 @@ void setup() {
   //put in initial value for testing
   Valid_Entrance_Codes.addEntry(Start_Pass);
   Valid_Entrance_Codes.printBuffer();
-  Create Task 2 (runs on Core 0)
+  // Create Task 2 (runs on Core 0)
   xTaskCreatePinnedToCore(
      Process_BT_Message,        // Function to implement the task
     "Process_BT_Message",     // Name of the task
@@ -361,11 +436,22 @@ void setup() {
     &LCD_Thread_Handle,                //Task handle to keep track of created task 
     0                           //pin task to core 0
   );
+
+  xTaskCreatePinnedToCore(
+     TX_Message_Process,  // Task function. 
+    "TX_Message_Process",     // name of task. 
+    10000,                    // Stack size of task 
+    NULL,                     // parameter of the task 
+    2,                        // priority of the task 
+    &TX_Message_Handle,      // Task handle to keep track of created task 
+    1                         // pin task to core 1
+    );                       
  
+
   // Attach UART interrupt 
   RS485Serial.onReceive(onUartRx); // Attach the interrupt handler
 
-  Enter_Mess(); //LCD default screen
+  Enter_Mess();
 
   xTaskCreatePinnedToCore(MQTT_task, "MQTT_task", 5000, NULL, 1, &mqttTaskHandle, 1);
   if (mqttTaskHandle == NULL) {
