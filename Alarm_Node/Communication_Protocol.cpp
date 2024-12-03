@@ -37,7 +37,7 @@ unsigned char Ack_message[9] = {
   };
 
 uint8_t Fire_Node = 0x32;
-uint8_t Intrusion_Node = 0x33;
+uint8_t Intrusion_Node = 0x42;
 uint8_t Home_Address = 0x13;
 uint8_t Destination_Address = 0x28;
 uint8_t Location;
@@ -60,6 +60,8 @@ void Transmit_To_Bus(struct TX_Payload* data, unsigned char* message){
     RS485Serial.flush();  //only required for ESP32 forces the cpu to block on the sending
     #endif
     digitalWrite(Max485_CE, LOW);
+    // Serial.print("TX_Message: ");
+    // Print_Message(message, 7 + message[4]);
   }
 }
 
@@ -171,6 +173,8 @@ void Assemble_Message(struct TX_Payload* data, unsigned char* message) {
 /* Function to to extract the relevant information from the received transmission
    Automatically responds to requests for acknowledgement*/
 unsigned char Decode_Message(unsigned char* message, unsigned char* Sender_Address, unsigned char* Sender_Node_Type, unsigned char* payload) {
+  // Serial.print("RX_Message: ");
+  // Print_Message(message, 7 + message[4]);
   if (message[0] != START_BYTE || message[6 + message[4]] != END_BYTE) {
     Serial.println("Invalid start or end byte");
     return 0; // Error: Invalid start or end byte

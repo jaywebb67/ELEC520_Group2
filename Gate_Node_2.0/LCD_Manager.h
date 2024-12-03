@@ -1,10 +1,12 @@
 #ifndef LCD_MANAGER_H
 #define LCD_MANAGER_H
 
+#include "I2C_LCD.h"
 #include <Arduino.h>
-#include <LiquidCrystal_I2C.h>
+//#include <LiquidCrystal_I2C.h>
 
-extern LiquidCrystal_I2C lcd;
+//extern LiquidCrystal_I2C lcd;
+extern I2C_LCD lcd;
 extern QueueHandle_t LCD_Queue;
 
 typedef void (*FunctionPointer)(void);
