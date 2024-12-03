@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.IO.Ports;
 using System.Linq;
+using System.Security.AccessControl;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -59,7 +61,7 @@ namespace TerminalWPF
 
 
                 
-                locations = result == MessageBoxResult.Yes ? "All" : ShowInputDialog();
+                locations = result == MessageBoxResult.Yes ? "All" : GetRooms();
                 
 
                 var user = new User { username = username, gateCode = gateCode, password = password, permissions = permissions, location = locations};
@@ -74,18 +76,20 @@ namespace TerminalWPF
             ClearInputBoxes();
         }
 
-        private string ShowInputDialog()
+        private string GetRooms()
         {
+            string rooms = string.Empty;
             InputDialog inputDialog = new InputDialog();
-            if (inputDialog.ShowDialog() == true)
+            inputDialog.ShowDialog();
+
+            if (inputDialog.Finished)
             {
-                string userInput = inputDialog.InputText;
-                return userInput;
-            } else
-            {
-                return "";
+                rooms = inputDialog.Rooms;
             }
-            
+
+            inputDialog.Close();
+
+            return rooms;
         }
 
 
@@ -94,11 +98,19 @@ namespace TerminalWPF
             users = await FirebaseService.ReadUsersAsync("users");
         }
 
-        private void OnReadDataClick(object sender, RoutedEventArgs e)
+        private void OnGateDataClick(object sender, RoutedEventArgs e)
         {
             UpdateUsers();
-            DisplayData();
+            DisplayTextBlock.Text = logged_in == null ? logged_out : logged_in.gateCode;
         }
+
+        private void OnRoomDataClick(object sender, RoutedEventArgs e)
+        {
+            UpdateUsers();
+            DisplayTextBlock.Text = logged_in == null ? logged_out : logged_in.location;
+        }
+
+
 
         private void OnLoginClick(object sender, RoutedEventArgs e)
         {
@@ -128,13 +140,6 @@ namespace TerminalWPF
             logged_in = null;
             DisplayLogin.Text = logged_out;
             ClearTextInformation();
-        }
-
-
-
-        private void DisplayData()
-        {
-            DisplayTextBlock.Text = logged_in == null ? logged_out : logged_in.gateCode;
         }
 
         private string GenerateUniqueGateCode()

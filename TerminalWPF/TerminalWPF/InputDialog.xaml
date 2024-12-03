@@ -5,9 +5,10 @@
     <Grid>
         <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
             <TextBlock Name="PromptText" Text="Enter the rooms for access:" Margin="10" FontSize="16"/>
-            <TextBox Name="InputTextBox" Width="200" Margin="5"/>
+            <TextBox Name="InputTextBox" Width="200" Margin="5" PreviewTextInput="InputTextBox_PreviewTextInput" DataObject.Pasting="InputTextBox_Pasting"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Content="OK" Click="OnOkButtonClick" Margin="5"/>
+                <Button Content="finished" Click="OnFinishedClick" Margin="5"/>
+                <Button Content="next" Click="OnNextClick" Margin="5"/>
             </StackPanel>
         </StackPanel>
     </Grid>
