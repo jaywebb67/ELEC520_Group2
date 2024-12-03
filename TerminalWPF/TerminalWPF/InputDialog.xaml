@@ -1,0 +1,14 @@
+﻿<Window x:Class="TerminalWPF.InputDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Input Dialog" Height="200" Width="300" WindowStartupLocation="CenterOwner">
+    <Grid>
+        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock Name="PromptText" Text="Enter the rooms for access:" Margin="10" FontSize="16"/>
+            <TextBox Name="InputTextBox" Width="200" Margin="5"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Content="OK" Click="OnOkButtonClick" Margin="5"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>
