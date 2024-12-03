@@ -15,6 +15,7 @@
 #define Bduty            180
 #define Gduty            40
 #define pwmOff           0
+#define speakerPin       47
 
 volatile unsigned char buffer[MESSAGE_LENGTH];
 volatile unsigned char bufferIndex = 0;
