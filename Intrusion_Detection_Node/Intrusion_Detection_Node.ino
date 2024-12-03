@@ -2,15 +2,15 @@
 #include "Communication_Protocol.h"
 
 #define RedPin    5
-#define YellowPin 10
+#define YellowPin 12
 #define trigPin   6
 #define echoPin   7
 #define mSensPin  8
 
 uint8_t Location;
-uint8_t Home_Node_Type = 0x32;
+uint8_t Home_Node_Type = 0x42;
 uint8_t Home_Address = 0x0F;    //Default address for initial set up
-uint8_t Destination_Address = 0xFF;   //Default address for initial set up
+uint8_t Destination_Address = 0x28;   //Default address for initial set up
 uint8_t Node_3 = 0x33;
 const char Respond_Cmd[8] = "RESPOND";
 const char Reset_Cmd[6] = "RESET";
@@ -58,12 +58,12 @@ void setup() {
   pinMode(echoPin, INPUT);
   pinMode(RedPin, OUTPUT);      //indicates alarm triggered
   pinMode(mSensPin, INPUT);
-  pinMode(GreenPin, OUTPUT);    //indicates sensors arenot operating
+  //pinMode(GreenPin, OUTPUT);    //indicates sensors arenot operating
   pinMode(YellowPin, OUTPUT);   //indicates sensors are operating
 
   digitalWrite(RedPin, LOW);
   digitalWrite(YellowPin, HIGH);
-  digitalWrite(GreenPin, LOW);
+  //digitalWrite(GreenPin, LOW);
 
   //begining connection to serial with 19200 baud rate
   Serial.begin(Baud);
@@ -89,9 +89,16 @@ void loop() {
   bool Occupied = false;
   bool ledState = false;
   while(true) {
+    //Serial.println("Entered loop");
     if(RS485Serial.available()){
       Addressee = Read_Serial_Port();
-
+      Serial.print("Received message: ");
+      for (int i = 0; i < MESSAGE_LENGTH; i++) {
+        Serial.print(receivedMessage[i], HEX);
+        Serial.print(" ");
+      }
+      Serial.println();
+      Serial.println((char*)RX_Message_Payload);
       if(Addressee == Home_Address){
         if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
           Transmit_To_Bus(&Alive);
@@ -116,13 +123,15 @@ void loop() {
     }
 
     if(!Occupied) {
-      Current_Time = millis();
+      unsigned long Current_Time = millis();
+      //Serial.println("Not occupied");
       UltraSonic();
       AccXYZ();
-      MotionSensor();
+      //MotionSensor();
       if (imuAlert || ultraSonicAlert || mSensValue){
+        Serial.println("Flags set");
         if(Current_Time-Lost_Time >= Sampling_Period){
-          digitalWrite(RedPin, HIGH);  
+            
           Transmit_To_Bus(&Intrusion);  
           imuAlert = false;
           ultraSonicAlert = false;
@@ -156,6 +165,7 @@ void AccXYZ(){
 
   if (AccZ > 1.1 || AccZ < 0.8 || AccX > 0.15 || AccX < -0.15 || AccY > 0.15 || AccY < -0.15){
     imuAlert = true;
+    digitalWrite(RedPin, HIGH);
   } 
 
 }
@@ -168,11 +178,12 @@ void UltraSonic(){
   digitalWrite(trigPin, LOW);
   duration = pulseIn(echoPin, HIGH);
 
-  //Serial.println();
-  //Serial.print(duration);
+  Serial.print("Ping time");
+  Serial.println(duration);
 
   if (duration < 500){
     ultraSonicAlert = true;
+    digitalWrite(RedPin, HIGH);
   } 
 }
 
