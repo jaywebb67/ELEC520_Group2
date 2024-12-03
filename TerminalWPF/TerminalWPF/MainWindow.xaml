@@ -1,0 +1,24 @@
+﻿<Window x:Class="TerminalWPF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MainWindow" Height="450" Width="800">
+    <Grid>
+        <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Top">
+            <TextBlock Name="DisplayLogin" Margin="10" FontSize="16"/>
+        </StackPanel>
+        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+
+            <TextBlock Name="UsernameText" Text="Username:" Margin="10, 10,0,0"/>
+            <TextBox Name="UsernameTextBox" Width="200" Margin="5" Text="" Foreground="Black"/>
+            <TextBlock Name="PasswordText" Text="Password:" Margin="10, 10,0,0"/>
+            <PasswordBox Name="PasswordBox" Width="200" Margin="5" Password="" Foreground="Black"/>
+            <Button Content="Login" Click="OnLoginClick" Margin="5"/>
+            <Button Content="Logout" Click="OnLogoutClick" Margin="5"/>
+            <Button Content="Create User" Click="OnCreateUserClick" Margin="5"/>
+            <TextBlock Name="UserDisplayTextBlock" Margin="10" FontSize="16"/>
+            <Button Content="Display Gate Code" Click="OnReadDataClick" Margin="5"/>
+            <TextBlock Name="DisplayTextBlock" Margin="10" FontSize="16"/>
+        </StackPanel>
+
+    </Grid>
+</Window>
