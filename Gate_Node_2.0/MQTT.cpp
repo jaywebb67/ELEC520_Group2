@@ -190,10 +190,10 @@ void mqttPublisher(void* parameter) {
       }
         
       // Log the published message
-      Serial.print("Published to topic: ");
-      Serial.print(message.topic.c_str());
-      Serial.print(" | Payload: ");
-      Serial.println(message.payload);
+      // Serial.print("Published to topic: ");
+      // Serial.print(message.topic.c_str());
+      // Serial.print(" | Payload: ");
+      // Serial.println(message.payload);
     
 
     }
