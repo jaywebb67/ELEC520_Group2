@@ -93,6 +93,7 @@ void loop() {
       Addressee = Read_Serial_Port();
       Serial.print("RX_Message: ");
       Print_Message(RX_Message, 7 + RX_Message[4]);
+      Serial.println((char*)RX_Message_Payload);
       if(Addressee == Home_Address){
         if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
           Transmit_To_Bus(&Alive);

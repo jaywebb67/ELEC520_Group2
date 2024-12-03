@@ -138,10 +138,11 @@ unsigned char Read_Serial_Port() {
   memset(RX_Message_Payload, 0, sizeof(RX_Message_Payload));
 
   // Read bytes until the complete message with start and end bytes is found
-  while (RS485Serial.available()) {
+  while (RS485Serial.available()>0) {
     char incomingByte = RS485Serial.read();
-    Serial.print("Received byte: 0x");
-    Serial.println(incomingByte, HEX);
+    delayMicroseconds(100);
+    // Serial.print("Received byte: 0x");
+    // Serial.println(incomingByte, HEX);
 
     if (incomingByte == 0x02) {
       // Reset buffers and start from the beginning if the start byte is found
