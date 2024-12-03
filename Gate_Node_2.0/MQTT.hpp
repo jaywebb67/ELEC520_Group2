@@ -7,7 +7,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include "Char_Buffer.h"
-
+#include "Communication_Protocol.h"
 
 //NetworkClientSecure client;
 extern WiFiClientSecure client;

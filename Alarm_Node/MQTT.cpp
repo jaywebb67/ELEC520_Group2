@@ -335,6 +335,7 @@ void mqttHandler(void* pvParameters) {
             if (receivedMsg.payload == "Alarm Disabled"){
               //Serial.println("Alarm disarmed");
               //alarmEnabled = false;
+              
               msg = {6,"Vuser"};
               Transmit_To_Bus(&msg);
             }

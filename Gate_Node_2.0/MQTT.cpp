@@ -23,8 +23,8 @@ const char* mqttServer = "40c06ef97ec5427eb54aa49e5c03c12c.s1.eu.hivemq.cloud";
 const uint16_t mqttPort = 8883;
 
 // WiFi credentials
-const char* ssid = "BT-CJC2PH";//"Jay's WiFi";
-const char* password = "NfECRbGtfV37Hd";//"jaywebb1";//
+const char* ssid = "Jays_WiFi";//BT-CJC2PH";//
+const char* password = "jaywebb1";//"NfECRbGtfV37Hd";//
 
 //topic for recieving user credential updates
 String usersTopic = "";
@@ -126,7 +126,7 @@ void MQTT_SetUp(){
         Serial.println("mqttHandler task created successfully.");
     }
 
-    xTaskCreatePinnedToCore(mqttHandler, "mqttHandler", 5000, NULL, 1, &mqttReceiveHandle, 1);
+    xTaskCreatePinnedToCore(mqttHandler, "mqttHandler", 5000, NULL, 2, &mqttReceiveHandle, 1);
     if (mqttTaskHandle == NULL) {
         Serial.println("Failed to create mqttHandler task.");
     } else {
@@ -177,20 +177,24 @@ void mqttPublisher(void* parameter) {
       if(message.topic == "ELEC520/userAccess"){
         String payload = message.payload +" "+ clientId;
         mqttClient.publish(message.topic.c_str(), payload.c_str());
-        // Log the published message
-        Serial.print("Published to topic: ");
-        Serial.print("ELEC520/userAccess");
-        Serial.print(" | Payload: ");
-        Serial.println(message.payload);
       }
-      else{
-        mqttClient.publish(message.topic.c_str(), message.payload.c_str());
-        // Log the published message
-        Serial.print("Published to topic: ");
-        Serial.print(message.topic.c_str());
-        Serial.print(" | Payload: ");
-        Serial.println(message.payload);
+      else if((message.topic == "ELEC520/alarm")){
+        if(!mqttClient.connected()){
+            uint8_t temp = Destination_Address;
+            Destination_Address = 0x13;
+            
+        }
+        else{
+          mqttClient.publish(message.topic.c_str(), message.payload.c_str());
+        }
       }
+        
+      // Log the published message
+      Serial.print("Published to topic: ");
+      Serial.print(message.topic.c_str());
+      Serial.print(" | Payload: ");
+      Serial.println(message.payload);
+    
 
     }
   }

@@ -1,6 +1,5 @@
 #include <Wire.h>
 #include "I2C_LCD.h"
-#include "Communication_Protocol.h"
 #include "LCD_Manager.h"
 #include "MQTT.hpp"
 #include "driver/uart.h"
@@ -41,6 +40,7 @@ unsigned long debounceDelay = 250;        // Debounce time in milliseconds
 volatile uint8_t Valid_Input_Presses = 0;
 volatile unsigned long lastInterruptTime = 0;
 volatile bool isPressed = false;
+bool alarmEnabled = true;
 
 // Define task handles
 TaskHandle_t Keypad_Reader = NULL;
@@ -139,6 +139,7 @@ void notify_User(int x) {
       Send_To_LCD_Queue(Broken);
       break;
   }
+  Send_To_LCD_Queue(Enter_Mess);
 }
 
 int Test_Entry_Code(const char* code) {
@@ -327,12 +328,12 @@ void LCD_Thread(void *pvParameters) {
 void TX_Message_Process(void *pvParameters) {
   struct TX_Q receivedMessage;
   while (1) {
-  if (xQueueReceive(TX_Queue, &receivedMessage, portMAX_DELAY)) {
-    uint8_t temp = Destination_Address;
-    Destination_Address = receivedMessage.dest;
-    Transmit_To_Bus(receivedMessage.message);
-    Destination_Address = temp;
-  }
+    if (xQueueReceive(TX_Queue, &receivedMessage, portMAX_DELAY)) {
+        uint8_t temp = Destination_Address;
+        Destination_Address = receivedMessage.dest;
+        Transmit_To_Bus(receivedMessage.message);
+        Destination_Address = temp;
+    }
   }
 }
 void receiveEvent(int howMany) {
@@ -355,7 +356,7 @@ void setup() {
   //call function to set up correct communication pins and serial port for the board in use
   Comms_Set_Up();
   Serial.println("Hello");
-  MQTT_SetUp();
+  
   Wire.begin(I2C_SLAVE_ADDRESS);  // Initialize the I2C bus as a slave
   Wire.onReceive(BluetoothDataReceived);   // Register the receive event handler
   //Wire.onReceive(receiveEvent);   // Register the receive event handler
@@ -371,7 +372,7 @@ void setup() {
 
   LCD_Innit();
   
-  
+  MQTT_SetUp();
   
 
   
@@ -442,7 +443,7 @@ void setup() {
     "TX_Message_Process",     // name of task. 
     10000,                    // Stack size of task 
     NULL,                     // parameter of the task 
-    2,                        // priority of the task 
+    1,                        // priority of the task 
     &TX_Message_Handle,      // Task handle to keep track of created task 
     1                         // pin task to core 1
     );                       
