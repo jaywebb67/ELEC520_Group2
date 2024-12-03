@@ -4,6 +4,7 @@
 #include "MQTT.hpp"
 #include "driver/uart.h"
 #include "driver/gpio.h"
+#include "Communication_Protocol.h"
 
 #define DEVICE_NAME "Gate 1"
 #define I2C_SLAVE_ADDRESS 0x03 // Address of the slave device
@@ -12,7 +13,8 @@
 
 
 struct TX_Q {
-  const struct TX_Payload* message;
+  //const struct TX_Payload* message;
+  struct TX_Payload* message;
   uint8_t dest;
 };
 
@@ -33,8 +35,8 @@ char receivedCode[7];
 bool codeReceived = false;
 uint8_t response = 1;
 volatile uint32_t counter = 0;
-// volatile unsigned char buffer[MESSAGE_LENGTH];
-// volatile unsigned char bufferIndex = 0;
+volatile unsigned char buffer[MESSAGE_LENGTH];
+volatile unsigned char bufferIndex = 0;
 volatile uint32_t bytes_Received = 0;
 unsigned long debounceDelay = 250;        // Debounce time in milliseconds
 volatile uint8_t Valid_Input_Presses = 0;
@@ -48,7 +50,8 @@ TaskHandle_t Bluetooth_Task_Handle = NULL; // Task handle for Bluetooth task
 TaskHandle_t LCD_Thread_Handle;
 //TaskHandle_t RX_Message_Handle;
 TaskHandle_t TX_Message_Handle;
-
+QueueHandle_t RX_Queue;
+TaskHandle_t RX_Message_Handle;
 QueueHandle_t TX_Queue;
 // Timer handle 
 TimerHandle_t Keypad_Timeout_Timer;
@@ -62,13 +65,25 @@ void TimeoutCallback(TimerHandle_t xTimer) {
   Send_To_LCD_Queue(Enter_Mess);
 }
 
-// void IRAM_ATTR Key_Pressed_ISR() {
-//   if(!isPressed) {
-//     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-//     vTaskNotifyGiveFromISR(Keypad_Reader, &xHigherPriorityTaskWoken);
-//     portYIELD_FROM_ISR(xHigherPriorityTaskWoken); // Perform a context switch if needed
-//   }
-// }
+// ISR for multi thread applications
+void IRAM_ATTR onUartRx() {
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  char data = RS485Serial.read(); // Read data from HardwareSerial
+
+  if (bufferIndex < 40) {
+    buffer[bufferIndex++] = data;
+
+    // Check if the full message is received
+    if (bufferIndex == MESSAGE_LENGTH || data == END_BYTE) {
+      xQueueSendFromISR(RX_Queue, (const void*)buffer, &xHigherPriorityTaskWoken); // Cast buffer to const void*
+      bufferIndex = 0; // Reset buffer index for the next message
+    }
+  }
+
+  if (xHigherPriorityTaskWoken) {
+    portYIELD_FROM_ISR();
+  }
+}
 
 //alternative keypad ISR more stable but wrong in every way
 void IRAM_ATTR Key_Pressed_ISR() {
@@ -307,6 +322,25 @@ void Keypad_Read(void *pvParameters) {
       isPressed = false;
 
       
+  }
+}
+
+// RS485 serial port task
+void RX_Message_Process(void *pvParameters) {
+  unsigned char receivedMessage[MESSAGE_LENGTH];
+  while (1) {
+    if (xQueueReceive(RX_Queue, &receivedMessage, portMAX_DELAY)) {
+      memset(RX_Message_Payload, 0, sizeof(RX_Message_Payload));
+      Addressee = Decode_Message(receivedMessage, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
+      // Process received message
+      Serial.print("Received message: ");
+      for (int i = 0; i < MESSAGE_LENGTH; i++) {
+        Serial.print(receivedMessage[i], HEX);
+        Serial.print(" ");
+      }
+      Serial.println();
+      Serial.println((char*)RX_Message_Payload);
+    }
   }
 }
 
