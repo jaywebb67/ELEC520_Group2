@@ -16,8 +16,11 @@
             <Button Content="Logout" Click="OnLogoutClick" Margin="5"/>
             <Button Content="Create User" Click="OnCreateUserClick" Margin="5"/>
             <TextBlock Name="UserDisplayTextBlock" Margin="10" FontSize="16"/>
-            <Button Content="Display Gate Code" Click="OnReadDataClick" Margin="5"/>
+            <Button Content="Display Gate Code" Click="OnGateDataClick" Margin="5"/>
+            <Button Content="Display Room Access" Click="OnRoomDataClick" Margin="5"/>
             <TextBlock Name="DisplayTextBlock" Margin="10" FontSize="16"/>
+            
+
         </StackPanel>
 
     </Grid>

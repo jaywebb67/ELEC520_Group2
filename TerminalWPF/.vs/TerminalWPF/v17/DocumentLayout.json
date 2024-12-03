@@ -1,34 +1,34 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\",
+  "WorkspaceRootPath": "C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|c:\\users\\ajsfi\\source\\repos\\terminalwpf\\terminalwpf\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|c:\\users\\ajsfi\\elec520_group2\\terminalwpf\\terminalwpf\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|solutionrelative:terminalwpf\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\terminalwpf\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|solutionrelative:terminalwpf\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\terminalwpf\\inputdialog.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
-      "RelativeMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|solutionrelative:terminalwpf\\inputdialog.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\terminalwpf\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "AbsoluteMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\terminalwpf\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
       "RelativeMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|solutionrelative:terminalwpf\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\terminalwpf\\app.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\terminalwpf\\inputdialog.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|solutionrelative:terminalwpf\\inputdialog.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\terminalwpf\\inputdialog.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|solutionrelative:terminalwpf\\inputdialog.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\terminalwpf\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|solutionrelative:terminalwpf\\user.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\terminalwpf\\app.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|solutionrelative:terminalwpf\\app.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\terminalwpf\\firebaseservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\terminalwpf\\firebaseservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|solutionrelative:terminalwpf\\firebaseservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\terminalwpf\\inputdialog.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{482B0E9A-7FD2-4633-A453-5CB0025905B5}|TerminalWPF\\TerminalWPF.csproj|solutionrelative:terminalwpf\\inputdialog.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -38,28 +38,32 @@
       "DocumentGroups": [
         {
           "DockedWidth": 375,
-          "SelectedChildIndex": 6,
+          "SelectedChildIndex": 7,
           "Children": [
             {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{26341fe2-71dd-46fd-bb1b-2e51a92a0d64}"
+            },
+            {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 2,
               "Title": "InputDialog.xaml.cs",
-              "DocumentMoniker": "C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\TerminalWPF\\InputDialog.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\TerminalWPF\\InputDialog.xaml.cs",
               "RelativeDocumentMoniker": "TerminalWPF\\InputDialog.xaml.cs",
-              "ToolTip": "C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\TerminalWPF\\InputDialog.xaml.cs",
+              "ToolTip": "C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\TerminalWPF\\InputDialog.xaml.cs",
               "RelativeToolTip": "TerminalWPF\\InputDialog.xaml.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAsAAAAAAAAAAAAiwBcAAAAtAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2024-11-27T15:37:25.753Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "InputDialog.xaml",
-              "DocumentMoniker": "C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\TerminalWPF\\InputDialog.xaml",
+              "DocumentMoniker": "C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\TerminalWPF\\InputDialog.xaml",
               "RelativeDocumentMoniker": "TerminalWPF\\InputDialog.xaml",
-              "ToolTip": "C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\TerminalWPF\\InputDialog.xaml",
+              "ToolTip": "C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\TerminalWPF\\InputDialog.xaml",
               "RelativeToolTip": "TerminalWPF\\InputDialog.xaml",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
               "WhenOpened": "2024-11-27T15:35:51.816Z",
@@ -67,50 +71,47 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 4,
               "Title": "user.cs",
-              "DocumentMoniker": "C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\TerminalWPF\\user.cs",
+              "DocumentMoniker": "C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\TerminalWPF\\user.cs",
               "RelativeDocumentMoniker": "TerminalWPF\\user.cs",
-              "ToolTip": "C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\TerminalWPF\\user.cs",
+              "ToolTip": "C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\TerminalWPF\\user.cs",
               "RelativeToolTip": "TerminalWPF\\user.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAuwAUAAAAoAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2024-11-26T11:38:51.39Z",
-              "EditorCaption": ""
+              "WhenOpened": "2024-11-26T11:38:51.39Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "FirebaseService.cs",
+              "DocumentMoniker": "C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\TerminalWPF\\FirebaseService.cs",
+              "RelativeDocumentMoniker": "TerminalWPF\\FirebaseService.cs",
+              "ToolTip": "C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\TerminalWPF\\FirebaseService.cs",
+              "RelativeToolTip": "TerminalWPF\\FirebaseService.cs",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAAA0AAABmAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-11-26T10:30:54.862Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 5,
-              "Title": "FirebaseService.cs",
-              "DocumentMoniker": "C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\TerminalWPF\\FirebaseService.cs",
-              "RelativeDocumentMoniker": "TerminalWPF\\FirebaseService.cs",
-              "ToolTip": "C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\TerminalWPF\\FirebaseService.cs",
-              "RelativeToolTip": "TerminalWPF\\FirebaseService.cs",
-              "ViewState": "AgIAAAMAAAAAAAAAAAAAAA0AAABmAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2024-11-26T10:30:54.862Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
               "Title": "App.xaml.cs",
-              "DocumentMoniker": "C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\TerminalWPF\\App.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\TerminalWPF\\App.xaml.cs",
               "RelativeDocumentMoniker": "TerminalWPF\\App.xaml.cs",
-              "ToolTip": "C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\TerminalWPF\\App.xaml.cs",
+              "ToolTip": "C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\TerminalWPF\\App.xaml.cs",
               "RelativeToolTip": "TerminalWPF\\App.xaml.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAABmAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2024-11-26T10:29:29.154Z",
-              "EditorCaption": ""
+              "WhenOpened": "2024-11-26T10:29:29.154Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 1,
               "Title": "MainWindow.xaml",
-              "DocumentMoniker": "C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\TerminalWPF\\MainWindow.xaml",
+              "DocumentMoniker": "C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\TerminalWPF\\MainWindow.xaml",
               "RelativeDocumentMoniker": "TerminalWPF\\MainWindow.xaml",
-              "ToolTip": "C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\TerminalWPF\\MainWindow.xaml",
+              "ToolTip": "C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\TerminalWPF\\MainWindow.xaml",
               "RelativeToolTip": "TerminalWPF\\MainWindow.xaml",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
               "WhenOpened": "2024-11-26T10:11:10.92Z",
@@ -120,11 +121,11 @@
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "MainWindow.xaml.cs",
-              "DocumentMoniker": "C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\TerminalWPF\\MainWindow.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\TerminalWPF\\MainWindow.xaml.cs",
               "RelativeDocumentMoniker": "TerminalWPF\\MainWindow.xaml.cs",
-              "ToolTip": "C:\\Users\\ajsfi\\source\\repos\\TerminalWPF\\TerminalWPF\\MainWindow.xaml.cs",
+              "ToolTip": "C:\\Users\\ajsfi\\ELEC520_Group2\\TerminalWPF\\TerminalWPF\\MainWindow.xaml.cs",
               "RelativeToolTip": "TerminalWPF\\MainWindow.xaml.cs",
-              "ViewState": "AgIAAIcAAAAAAAAAAAAAAC8AAAAnAAAAAAAAAA==",
+              "ViewState": "AgIAAF4AAAAAAAAAAAAmwG8AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2024-11-26T10:11:09.021Z",
               "EditorCaption": ""
