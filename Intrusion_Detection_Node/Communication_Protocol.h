@@ -14,9 +14,8 @@ extern SoftwareSerial RS485Serial;
  extern TaskHandle_t RX_Message_Handle;
 #endif
 
-#define Location 0x1A  
+ 
 #define Baud                9600
-#define Home_Node_Type      0x32
 #define START_BYTE          0x02
 #define END_BYTE            0x03
 #define ENQ                 0X05
@@ -46,7 +45,8 @@ struct Set_Up_Pins {
 };
         
 extern uint8_t Home_Address;
-//extern const uint8_t Home_Node_Type;
+extern uint8_t Location;
+extern uint8_t Home_Node_Type;
 extern uint8_t Destination_Address;
 extern uint8_t Sender_Address;
 extern volatile bool Bus_Busy;

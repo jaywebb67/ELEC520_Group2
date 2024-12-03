@@ -2,7 +2,7 @@
 #include "Communication_Protocol.h"
 
 #define RedPin    5
-#define YellowPin 10
+#define YellowPin 12
 #define trigPin   6
 #define echoPin   7
 #define mSensPin  8
@@ -58,12 +58,12 @@ void setup() {
   pinMode(echoPin, INPUT);
   pinMode(RedPin, OUTPUT);      //indicates alarm triggered
   pinMode(mSensPin, INPUT);
-  pinMode(GreenPin, OUTPUT);    //indicates sensors arenot operating
+  //pinMode(GreenPin, OUTPUT);    //indicates sensors arenot operating
   pinMode(YellowPin, OUTPUT);   //indicates sensors are operating
 
   digitalWrite(RedPin, LOW);
   digitalWrite(YellowPin, HIGH);
-  digitalWrite(GreenPin, LOW);
+  //digitalWrite(GreenPin, LOW);
 
   //begining connection to serial with 19200 baud rate
   Serial.begin(Baud);
@@ -91,7 +91,8 @@ void loop() {
   while(true) {
     if(RS485Serial.available()){
       Addressee = Read_Serial_Port();
-
+      Serial.print("RX_Message: ");
+      Print_Message(RX_Message, 7 + RX_Message[4]);
       if(Addressee == Home_Address){
         if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
           Transmit_To_Bus(&Alive);
@@ -116,10 +117,10 @@ void loop() {
     }
 
     if(!Occupied) {
-      Current_Time = millis();
+      unsigned long Current_Time = millis();
       UltraSonic();
       AccXYZ();
-      MotionSensor();
+      //MotionSensor();
       if (imuAlert || ultraSonicAlert || mSensValue){
         if(Current_Time-Lost_Time >= Sampling_Period){
           digitalWrite(RedPin, HIGH);  

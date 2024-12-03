@@ -95,36 +95,100 @@ void Comms_Set_Up(){
 
 /*Call this function to read the serial port message is stored to RX_Message_Payload, sender address, and sender node type are stored
    function returns the intended recipiant address*/
+// unsigned char Read_Serial_Port() {
+//   int index = 0;
+//   // Clear RX_Message buffer, Forward buffer and RX_Message_Payload buffer to prevent message overlaps
+//   memset(RX_Message, 0, sizeof(RX_Message));
+//   memset(Forward, 0, sizeof(Forward));
+//   // Clear 
+//   memset(RX_Message_Payload, 0, sizeof(RX_Message_Payload));
+
+//   // Read bytes until end byte (0x03) is found
+//   while (RS485Serial.available()) {
+//     char incomingByte = RS485Serial.read();
+//     RX_Message[index++] = incomingByte;
+//     Forward[index++] = incomingByte;
+
+//     // Check for buffer overflow
+//     if (index >= sizeof(RX_Message) - 1) {
+//       Serial.println("Buffer overflow");
+//       break;
+//     }
+
+//     // Check for end byte
+//     if (incomingByte == 0x03) {
+//       break;
+//     }
+//   }
+//   // Null-terminate the string
+//   RX_Message[index] = '\0';
+//   Forward[index] = '\0';
+//   // Process the message
+//   unsigned char address = Decode_Message(RX_Message, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
+//   return address;
+// }
 unsigned char Read_Serial_Port() {
   int index = 0;
-  // Clear RX_Message buffer, Forward buffer and RX_Message_Payload buffer to prevent message overlaps
+  bool startByteFound = false;
+  bool endByteFound = false;
+
+  // Clear RX_Message buffer, Forward buffer, and RX_Message_Payload buffer to prevent message overlaps
   memset(RX_Message, 0, sizeof(RX_Message));
   memset(Forward, 0, sizeof(Forward));
-  // Clear 
   memset(RX_Message_Payload, 0, sizeof(RX_Message_Payload));
 
-  // Read bytes until end byte (0x03) is found
+  // Read bytes until the complete message with start and end bytes is found
   while (RS485Serial.available()) {
     char incomingByte = RS485Serial.read();
-    RX_Message[index++] = incomingByte;
-    Forward[index++] = incomingByte;
+    Serial.print("Received byte: 0x");
+    Serial.println(incomingByte, HEX);
 
-    // Check for buffer overflow
-    if (index >= sizeof(RX_Message) - 1) {
-      Serial.println("Buffer overflow");
-      break;
-    }
-
-    // Check for end byte
-    if (incomingByte == 0x03) {
-      break;
+    if (incomingByte == 0x02) {
+      // Reset buffers and start from the beginning if the start byte is found
+      memset(RX_Message, 0, sizeof(RX_Message));
+      memset(Forward, 0, sizeof(Forward));
+      index = 0;
+      startByteFound = true;
+      endByteFound = false;
+      RX_Message[index] = incomingByte;
+      Forward[index] = incomingByte;
+      index++;
+    } else if (incomingByte == 0x03) {
+      if (startByteFound) {
+        RX_Message[index] = incomingByte;
+        Forward[index] = incomingByte;
+        index++;
+        endByteFound = true;
+        break;
+      }
+    } else if (startByteFound && incomingByte != 0x00) {
+      RX_Message[index] = incomingByte;
+      Forward[index] = incomingByte;
+      index++;
+      // Check for buffer overflow
+      if (index >= sizeof(RX_Message) - 1) {
+        Serial.println("Buffer overflow");
+        break;
+      }
     }
   }
+
+  if (!endByteFound) {
+    Serial.println("Invalid start or end byte");
+  }
+
   // Null-terminate the string
   RX_Message[index] = '\0';
   Forward[index] = '\0';
-  // Process the message
-  unsigned char address = Decode_Message(RX_Message, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
+
+  // Process the message if both start and end bytes were found
+  unsigned char address = 0;
+  if (startByteFound && endByteFound) {
+    address = Decode_Message(RX_Message, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
+  } else {
+    Serial.println("Message was not processed due to incomplete start/end bytes");
+  }
+
   return address;
 }
 
