@@ -43,6 +43,7 @@ void IRAM_ATTR onUartRx();
 void IRAM_ATTR Key_Pressed_ISR();
 void TimeoutCallback(TimerHandle_t xTimer);
 void Set_Alarm(uint8_t pin, uint32_t duty);
+void Disable_Alarm();
 
 QueueHandle_t RX_Queue;
 
@@ -250,16 +251,7 @@ void Keypad_Read(void *pvParameters) {
         digitalWrite(PurplePin, LOW);
         xTimerStop(Keypad_Timeout_Timer, 0);
         if(strncmp((const char*)Input_Key_Code, Admin, 6) == 0){
-          Serial.println("Right admin code");
-          vTaskSuspend(LED_Flash);
-          ledcWrite(PinkPin, 0);
-          ledcWrite(BluePin, 0);
-          ledcWrite(GreenPin, 0);
-          digitalWrite(YellowPin, HIGH);
-          digitalWrite(RedPin_1, LOW); 
-          digitalWrite(RedPin_2, LOW);
-          Transmit_To_Bus(&Reset);
-          //inform dashboard via mqtt Set inform flag to send standard message?
+        void Disable_Alarm()
         }
         else {
           Serial.println("Wrong code");
@@ -277,6 +269,18 @@ void Keypad_Read(void *pvParameters) {
 
       
   }
+}
+
+void Disable_Alarm(){
+          Serial.println("Right admin code");
+          vTaskSuspend(LED_Flash);
+          ledcWrite(PinkPin, 0);
+          ledcWrite(BluePin, 0);
+          ledcWrite(GreenPin, 0);
+          digitalWrite(YellowPin, HIGH);
+          digitalWrite(RedPin_1, LOW); 
+          digitalWrite(RedPin_2, LOW);
+          Transmit_To_Bus(&Reset);
 }
 void IRAM_ATTR Key_Pressed_ISR() {
   unsigned long interruptTime = millis();
