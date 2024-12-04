@@ -59,7 +59,7 @@ void setup() {
   //call function to set up correct communication pins and serial port for the board in use
   Comms_Set_Up();
   Serial.println("Hello");
-  mqttSetUp();
+  MQTT_SetUp();
   ledcAttach(PinkPin,  pwmFrequency, resolution);
   ledcAttach(BluePin,  pwmFrequency, resolution);
   ledcAttach(GreenPin, pwmFrequency, resolution);
@@ -351,7 +351,7 @@ void RX_Message_Process(void *pvParameters) {
       }
       else if(Sender_Node_Type == Intrusion_Node) {
           Set_Alarm(GreenPin, Gduty);
-          tone(SPEAKER_PIN, 400,500);
+          //tone(SPEAKER_PIN, 400,500);
       }
       Serial.print("Received message: ");
       for (int i = 0; i < MESSAGE_LENGTH; i++) {
