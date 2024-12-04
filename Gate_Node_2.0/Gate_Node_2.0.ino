@@ -69,7 +69,7 @@ void TimeoutCallback(TimerHandle_t xTimer) {
 void IRAM_ATTR onUartRx() {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
   char data = RS485Serial.read(); // Read data from HardwareSerial
-  Serial.println("RX ISR");
+  //Serial.println("RX ISR");
   
   if (bufferIndex < 40) {
     buffer[bufferIndex++] = data;

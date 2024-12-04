@@ -38,7 +38,7 @@ unsigned char Ack_message[9] = {
   '\0' // Null-terminator if needed 
   };
 
-uint8_t Location;
+
 uint8_t Sender_Address;
 uint8_t Sender_Node_Type;
 uint8_t Addressee;
