@@ -20,8 +20,8 @@ const char* mqttServer = "40c06ef97ec5427eb54aa49e5c03c12c.s1.eu.hivemq.cloud";
 const uint16_t mqttPort = 8883;
 
 // WiFi credentials
-const char* ssid = "BT-CJC2PH";//"Jay's WiFi";
-const char* password = "NfECRbGtfV37Hd";//"jaywebb1";//
+const char* ssid = "Jays_WiFi";//"BT-CJC2PH";//
+const char* password = "jaywebb1";//"NfECRbGtfV37Hd";//
 
 //topic for recieving user credential updates
 String usersTopic = "";
