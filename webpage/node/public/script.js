@@ -161,7 +161,45 @@ mqttClient.on('connect', function () {
   mqttClient.subscribe('ELEC520/imu', function (err) {
     if (!err) console.log('Subscribed to ELEC520/imu');
   });
+  // Assuming an existing MQTT client setup
+  mqttClient.subscribe('ELEC520/alarm', function (err){
+    if(!err) console.log('Subscribed to ELEC520/Alarm');
+  }); // Subscribe to the MQTT topic
+
 });
+
+
+let alarmActive = false;
+let flashingInterval;
+
+// Function to start screen flashing
+function startFlashing() {
+    if (alarmActive) return; // Avoid multiple intervals
+    alarmActive = true;
+
+    const overlay = document.getElementById('alarmOverlay');
+    overlay.style.display = 'block'; // Show the overlay
+
+    let opacity = 1;
+    flashingInterval = setInterval(() => {
+        overlay.style.backgroundColor = `rgba(255, 0, 0, ${opacity})`;
+        opacity = opacity === 1 ? 0 : 1; // Toggle opacity
+    }, 500); // Adjust for faster or slower flashing
+}
+
+// Function to stop screen flashing
+function stopFlashing() {
+    clearInterval(flashingInterval);
+    const overlay = document.getElementById('alarmOverlay');
+    overlay.style.display = 'none'; // Hide the overlay
+    alarmActive = false;
+}
+
+// Function to prompt admin login and disable the alarm
+function promptAdminLogin() {
+    const loginPrompt = document.getElementById('loginPrompt');
+    loginPrompt.style.display = 'block'; // Show the login prompt
+}
 
 mqttClient.on('error', function (err) {
   console.error('MQTT Connection Error:', err);
@@ -170,13 +208,50 @@ mqttClient.on('error', function (err) {
 
 // Handle incoming MQTT messages
 mqttClient.on('message', function (topic, message) {
-  const payload = JSON.parse(message.toString());
+  let payload;
+  try {
+      payload = JSON.parse(message.toString());
+  } catch (error) {
+      payload = message.toString(); // Fallback to plain string
+  }
+
   console.log(`Received message on ${topic}:`, payload);
 
   if (topic === 'ELEC520/temperature') {
     plotTemperature(payload);
   } else if (topic === 'ELEC520/imu') {
     plotIMU(payload);
+  } else if (topic === 'ELEC520/alarm' && payload === 'alarm triggered') {
+    console.log('ELEC502/Alarm msg received - Alarm triggered')
+    startFlashing(); // Start the flashing effect
+    promptAdminLogin(); // Prompt admin login
+  }
+});
+
+// Submit login form and send POST request to the server
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const username = document.getElementById('alarmUser').value;
+  const password = document.getElementById('alarmPassword').value;
+
+  try {
+      const response = await fetch('/api/admin-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.isAdmin) {
+          alert('Alarm disabled by admin.');
+          stopFlashing();
+          document.getElementById('loginPrompt').style.display = 'none';
+      } else {
+          alert(result.message || 'You do not have admin privileges.');
+      }
+  } catch (error) {
+      alert('An error occurred: ' + error.message);
   }
 });
 

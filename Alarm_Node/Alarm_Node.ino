@@ -333,8 +333,19 @@ void RX_Message_Process(void *pvParameters) {
         }
       }
       if(Addressee == Home_Address){
-        
+        uint8_t temp = Destination_Address;
+        Destination_Address = Intrusion_Node;
+        struct TX_Payload msg;
+        if(strcmp((const char*)RX_Message_Payload, "Alarm Enabled") == 0){
+          msg = {7,"NVuser"};
+        }
+        if(strcmp((const char*)RX_Message_Payload, "Alarm Disabled") == 0){
+          msg = {6,"Vuser"};
+        }
+        Transmit_To_Bus(&msg);
+        Destination_Address = temp;
       }
+      
       if(Sender_Node_Type == Fire_Node){
         Serial.println("It's a fire node");
         if(strcmp((const char*)RX_Message_Payload, "Fire Call") == 0){

@@ -136,7 +136,7 @@ mqttClient.on('message', async (topic, message) => {
             );
     
             // Add a delay to prevent flooding
-            await delay(100);
+            // await delay(100);
           }
         }
       } catch (error) {
