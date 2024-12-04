@@ -25,11 +25,12 @@ extern SoftwareSerial RS485Serial;
 #define Max485_CE           4
 #define RX_Pin_A            10
 #define TX_Pin_A            11
-#define RX_Pin_E            16
+#define RX_Pin_E            33
 #define TX_Pin_E            17
 #define ESP                 1
 #define NANO                0
 #define Bus_Monitor_Pin     2
+#define Bus_Monitor_Pin_E   34
 #define MESSAGE_LENGTH      40
 #define MQTT_Address        0x0A
 

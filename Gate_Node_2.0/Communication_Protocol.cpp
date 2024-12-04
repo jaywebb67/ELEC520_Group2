@@ -3,7 +3,7 @@
 //.cpp v 2.4
 
 struct Set_Up_Pins Nano = {RX_Pin_A, TX_Pin_A, Max485_CE, Bus_Monitor_Pin};
-struct Set_Up_Pins Esp  = {RX_Pin_E, TX_Pin_E, Max485_CE, Bus_Monitor_Pin};
+struct Set_Up_Pins Esp  = {RX_Pin_E, TX_Pin_E, Max485_CE, Bus_Monitor_Pin_E};
 
 #if defined(ARDUINO_AVR_NANO)
 SoftwareSerial RS485Serial(10, 11);
@@ -38,7 +38,7 @@ unsigned char Ack_message[9] = {
 
 uint8_t Fire_Node = 0x32;
 uint8_t Intrusion_Node = 0x42;
-uint8_t Home_Address = 0x13;
+uint8_t Home_Address = 0x23;
 uint8_t Destination_Address = 0x28;
 uint8_t Location;
 uint8_t Sender_Address;
@@ -71,11 +71,13 @@ void Comms_Set_Up(){
   Serial.println("Comms setup");
   #if defined(ARDUINO_AVR_NANO)
   Board_Select(&Nano);
+  attachInterrupt(digitalPinToInterrupt(Bus_Monitor_Pin), Bus_Monitor_Pin_interrupt, CHANGE);
   #else 
   Serial.println("ESP32 Comms setup");
   Board_Select(&Esp); 
+  attachInterrupt(digitalPinToInterrupt(Bus_Monitor_Pin_E), Bus_Monitor_Pin_interrupt, CHANGE);
   #endif
-  attachInterrupt(digitalPinToInterrupt(Bus_Monitor_Pin), Bus_Monitor_Pin_interrupt, CHANGE);
+  
   delay(1000);
   //Introduction();
   Serial.println("End of ESp32 Comms setup");

@@ -8,7 +8,7 @@
 #define mSensPin  8
 
 uint8_t Location;
-uint8_t Home_Node_Type = 0x32;
+uint8_t Home_Node_Type = 0x42;
 uint8_t Home_Address = 0x0F;    //Default address for initial set up
 uint8_t Destination_Address = 0xFF;   //Default address for initial set up
 uint8_t Node_3 = 0x33;
@@ -119,7 +119,7 @@ void loop() {
 
     if(!Occupied) {
       unsigned long Current_Time = millis();
-      UltraSonic();
+     // UltraSonic();
       AccXYZ();
       //MotionSensor();
       if (imuAlert || ultraSonicAlert || mSensValue){
