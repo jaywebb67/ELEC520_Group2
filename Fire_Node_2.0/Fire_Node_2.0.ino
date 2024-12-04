@@ -62,7 +62,7 @@ void Test_Heat_Sensor() {
       Fire_temp.length = snprintf(Fire_temp.message, sizeof(Fire_temp.message), "{\"temperature\":\"%.2f\"}", t);
       if (Fire_temp.length >= sizeof(Fire_temp.message)) {
           // Ensure null termination if snprintf truncates the message
-          Fire_temp.message[sizeof(Fire_temp.message) - 1] = '\0';
+          Fire_temp.message[sizeof(Fire_temp.message)] = '\0';
           Fire_temp.length = sizeof(Fire_temp.message) - 1;
       }
       uint8_t temp = Destination_Address;

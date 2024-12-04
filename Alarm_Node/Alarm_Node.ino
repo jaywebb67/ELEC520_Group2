@@ -347,13 +347,28 @@ void RX_Message_Process(void *pvParameters) {
       }
       
       if(Sender_Node_Type == Fire_Node){
+        MqttMessage mqttMessage;
         Serial.println("It's a fire node");
         if(strcmp((const char*)RX_Message_Payload, "Fire Call") == 0){
           Serial.println("It's a call event");
           Set_Alarm(PinkPin, Pduty);
+          mqttMessage.topic = "ELEC520/alarm";
+          // Assign the payload from RX_Message_Payload
+          mqttMessage.payload = String((char*)RX_Message_Payload);
+          // Send the MQTT message to the queue
+          if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
+              Serial.println("Failed to send message to MQTT queue");
+          }
         }
         else if (strcmp((const char*)RX_Message_Payload, "Heat Alarm") == 0){
           Set_Alarm(BluePin, Bduty);
+          mqttMessage.topic = "ELEC520/alarm";
+          // Assign the payload from RX_Message_Payload
+          mqttMessage.payload = String((char*)RX_Message_Payload);
+          // Send the MQTT message to the queue
+          if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
+              Serial.println("Failed to send message to MQTT queue");
+          }
         }
         else if(strcmp((const char*)RX_Message_Payload, "Sensor Error") == 0){
           Heat_Sensor_Error = true;
@@ -362,8 +377,17 @@ void RX_Message_Process(void *pvParameters) {
       }
       else if(Sender_Node_Type == Intrusion_Node) {
           Set_Alarm(GreenPin, Gduty);
+          MqttMessage mqttMessage;
+          mqttMessage.topic = "ELEC520/alarm";
+          // Assign the payload from RX_Message_Payload
+          mqttMessage.payload = String((char*)RX_Message_Payload);
+          // Send the MQTT message to the queue
+          if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
+              Serial.println("Failed to send message to MQTT queue");
+          }
           //tone(SPEAKER_PIN, 400,500);
       }
+
       Serial.print("Received message: ");
       for (int i = 0; i < MESSAGE_LENGTH; i++) {
         Serial.print(receivedMessage[i], HEX);
