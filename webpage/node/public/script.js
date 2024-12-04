@@ -173,18 +173,21 @@ let alarmActive = false;
 let flashingInterval;
 
 // Function to start screen flashing
-function startFlashing() {
-    if (alarmActive) return; // Avoid multiple intervals
-    alarmActive = true;
+function startFlashing(alarmType) {
+  if (alarmActive) return; // Avoid multiple intervals
+  alarmActive = true;
 
-    const overlay = document.getElementById('alarmOverlay');
-    overlay.style.display = 'block'; // Show the overlay
+  const overlay = document.getElementById('alarmOverlay');
+  overlay.style.display = 'block'; // Show the overlay
 
-    let opacity = 1;
-    flashingInterval = setInterval(() => {
-        overlay.style.backgroundColor = `rgba(255, 0, 0, ${opacity})`;
-        opacity = opacity === 1 ? 0 : 1; // Toggle opacity
-    }, 500); // Adjust for faster or slower flashing
+  const alarmHeader = document.getElementById('alarmHeader');
+  alarmHeader.textContent = alarmType || 'Alarm Triggered'; // Display the alarm type
+
+  let opacity = 1;
+  flashingInterval = setInterval(() => {
+      overlay.style.backgroundColor = `rgba(255, 0, 0, ${opacity})`;
+      opacity = opacity === 1 ? 0 : 1; // Toggle opacity
+  }, 500); // Adjust for faster or slower flashing
 }
 
 // Function to stop screen flashing
@@ -196,9 +199,12 @@ function stopFlashing() {
 }
 
 // Function to prompt admin login and disable the alarm
-function promptAdminLogin() {
-    const loginPrompt = document.getElementById('loginPrompt');
-    loginPrompt.style.display = 'block'; // Show the login prompt
+function promptAdminLogin(alarmType) {
+  const loginPrompt = document.getElementById('loginPrompt');
+  loginPrompt.style.display = 'block'; // Show the login prompt
+
+  const loginHeader = document.getElementById('loginHeader');
+  loginHeader.textContent = alarmType || 'Alarm Triggered'; // Display the alarm type
 }
 
 mqttClient.on('error', function (err) {
@@ -223,8 +229,8 @@ mqttClient.on('message', function (topic, message) {
     plotIMU(payload);
   } else if (topic === 'ELEC520/alarm' && payload === 'alarm triggered') {
     console.log('ELEC502/Alarm msg received - Alarm triggered')
-    startFlashing(); // Start the flashing effect
-    promptAdminLogin(); // Prompt admin login
+    startFlashing(payload); // Start the flashing effect
+    promptAdminLogin(payload); // Prompt admin login
   }
 });
 
@@ -255,12 +261,13 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   }
 });
 
+
 // Plot temperature data on the chart
 function plotTemperature(jsonValue) {
   const keys = Object.keys(jsonValue);
-
+  const x = (new Date()).getTime(); // Current timestamp
   keys.forEach((key, i) => {
-    const x = (new Date()).getTime(); // Current timestamp
+
     const y = Number(jsonValue[key]);
 
     if (chartT.series[i].data.length > 19) {
@@ -274,9 +281,9 @@ function plotTemperature(jsonValue) {
 // Plot IMU data on the chart
 function plotIMU(jsonValue) {
   const axes = ['x', 'y', 'z'];
-
+  const x = (new Date()).getTime(); // Current timestamp
   axes.forEach((axis, i) => {
-    const x = (new Date()).getTime(); // Current timestamp
+
     const y = Number(jsonValue[axis]);
 
     if (chartI.series[i].data.length > 19) {

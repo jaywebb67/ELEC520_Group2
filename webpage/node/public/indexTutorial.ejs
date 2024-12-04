@@ -343,37 +343,20 @@
                     <button type="button" onclick="closeEditPopup()">Cancel</button>
                 </form>
             </div>
-            <!-- Alarm Overlay -->
-            <div id="alarmOverlay" style="
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 0, 0, 1);
-            z-index: 9999;
-            pointer-events: none; /* Prevent interaction during flashing */
-            "></div>
-
-            <!-- Admin Login Prompt -->
-            <div id="loginPrompt" style="
-                display: none;
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background-color: white;
-                padding: 20px;
-                border: 2px solid black;
-                z-index: 10000;">
-                <h2>Admin Login</h2>
-                <form id="loginForm">
-                    <input type="username" id="alarmUser" placeholder="Username" required />
-                    <input type="password" id="alarmPassword" placeholder="Password" required />
-                    <button type="submit">Login</button>
-                </form>
+            <div id="alarmOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000;">
+                <div id="loginPrompt" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                    background: white; padding: 20px; border: 1px solid black; z-index: 2000;">
+                    <h2 id="alarmHeader"></h2> <!-- This will show the alarm type -->
+                    <form id="loginForm">
+                        <label for="alarmUser">Username:</label>
+                        <input type="text" id="alarmUser" name="username" required>
+                        <label for="alarmPassword">Password:</label>
+                        <input type="password" id="alarmPassword" name="password" required>
+                        <button type="submit">Login</button>
+                    </form>
+                </div>
             </div>
+            
 
         
         </main>
