@@ -343,6 +343,37 @@
                     <button type="button" onclick="closeEditPopup()">Cancel</button>
                 </form>
             </div>
+            <!-- Alarm Overlay -->
+            <div id="alarmOverlay" style="
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 0, 0, 1);
+            z-index: 9999;
+            pointer-events: none; /* Prevent interaction during flashing */
+            "></div>
+
+            <!-- Admin Login Prompt -->
+            <div id="loginPrompt" style="
+                display: none;
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background-color: white;
+                padding: 20px;
+                border: 2px solid black;
+                z-index: 10000;">
+                <h2>Admin Login</h2>
+                <form id="loginForm">
+                    <input type="username" id="alarmUser" placeholder="Username" required />
+                    <input type="password" id="alarmPassword" placeholder="Password" required />
+                    <button type="submit">Login</button>
+                </form>
+            </div>
 
         
         </main>

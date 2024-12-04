@@ -145,6 +145,39 @@ app.post('/logout', (req, res) => {
   });
 });
 
+// Admin login route
+app.post('/api/admin-login', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+      const dbRef = ref(database);
+      console.log(`Querying path: users/${username}`);
+      const snapshot = await get(child(dbRef, `users/${username}`)); // Query the specific user
+
+      if (snapshot.exists()) {
+          const user = snapshot.val();
+          console.log('User data:', user);
+
+          // Compare raw password directly (for now, without bcrypt)
+          if (user.password === password) {
+              if (user.permissions === 'admin') {
+                  return res.status(200).json({ isAdmin: true });
+              } else {
+                  return res.status(403).json({ message: 'You do not have admin privileges.' });
+              }
+          } else {
+              return res.status(401).json({ message: 'Invalid credentials.' });
+          }
+      } else {
+          console.error('User not found.');
+          return res.status(401).json({ message: 'Invalid credentials.' });
+      }
+  } catch (error) {
+      console.error('Error during admin login:', error);
+      res.status(500).json({ message: 'Internal server error.' });
+  }
+});
+
 
 // Render main dashboard
 app.get('/indexTutorial.html', async (req, res) => {

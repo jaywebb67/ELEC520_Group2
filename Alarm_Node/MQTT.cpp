@@ -330,23 +330,17 @@ void mqttHandler(void* pvParameters) {
         else if (receivedMsg.topic == "ELEC520/alarm") {
             Serial.println(receivedMsg.payload);
             receivedMsg.payload.trim();
+            uint8_t temp = Destination_Address;
             Destination_Address = Intrusion_Node;
             struct TX_Payload msg;
             if (receivedMsg.payload == "Alarm Disabled"){
-              //Serial.println("Alarm disarmed");
-              //alarmEnabled = false;
-              
               msg = {6,"Vuser"};
-              Transmit_To_Bus(&msg);
             }
             else{
-              //Serial.println("Alarm disarmed");
-              //alarmEnabled = true;
               msg = {7,"NVuser"};
-              Transmit_To_Bus(&msg);
-              // Serial.print("alarmEnabled is set to: ");
-              // Serial.println(alarmEnabled);
-            } 
+            }
+            Transmit_To_Bus(&msg);
+            Destination_Address = temp; 
         }
         receivedMsg.topic = "";
         receivedMsg.payload = "";

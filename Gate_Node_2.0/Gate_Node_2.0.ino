@@ -192,7 +192,7 @@ int Test_Entry_Code(const char* code) {
         if (xQueueSend(mqttPublishQueue, &msg, portMAX_DELAY) != pdPASS) {
           Serial.println("Failed to send message to MQTT queue");
         }
-        if((Current_Codes_In_Use.getCurrentIndex()>0) && (alarmEnabled)){
+        if((Current_Codes_In_Use.getCurrentIndex()>0)){
           MqttMessage msgAlarm;
           msgAlarm.topic = "ELEC520/alarm";
           msgAlarm.payload = "Alarm Disabled";
@@ -217,7 +217,7 @@ int Test_Entry_Code(const char* code) {
         if (xQueueSend(mqttPublishQueue, &msg, portMAX_DELAY) != pdPASS) {
           Serial.println("Failed to send message to MQTT queue");
         }
-        if((Current_Codes_In_Use.getCurrentIndex()==0) && (!alarmEnabled)){
+        if((Current_Codes_In_Use.getCurrentIndex()==0)){
           MqttMessage msgAlarm;
           msgAlarm.topic = "ELEC520/alarm";
           msgAlarm.payload = "Alarm Enabled";

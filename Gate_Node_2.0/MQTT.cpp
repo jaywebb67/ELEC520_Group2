@@ -181,8 +181,16 @@ void mqttPublisher(void* parameter) {
       else if((message.topic == "ELEC520/alarm")){
         if(!mqttClient.connected()){
             uint8_t temp = Destination_Address;
-            Destination_Address = 0x13;
-            
+            Destination_Address = Alarm_node;
+            struct TX_Payload msg;
+            if(message.payload == "Alarm Disabled"){
+              msg = {14, 'Alarm Disabled'};
+            }
+            else
+              msg = {13, 'Alarm Enabled'};
+            }
+            Transmit_To_Bus(&msg);
+            Destination_Address = temp;
         }
         else{
           mqttClient.publish(message.topic.c_str(), message.payload.c_str());
