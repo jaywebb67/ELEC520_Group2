@@ -162,7 +162,8 @@ unsigned char Read_Serial_Port() {
         endByteFound = true;
         break;
       }
-    } else if (startByteFound && incomingByte != 0x00) {
+    } //else if (startByteFound && incomingByte != 0x00) {
+      else{
       RX_Message[index] = incomingByte;
       Forward[index] = incomingByte;
       index++;

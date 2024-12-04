@@ -58,12 +58,10 @@ void setup() {
   pinMode(echoPin, INPUT);
   pinMode(RedPin, OUTPUT);      //indicates alarm triggered
   pinMode(mSensPin, INPUT);
-  //pinMode(GreenPin, OUTPUT);    //indicates sensors arenot operating
   pinMode(YellowPin, OUTPUT);   //indicates sensors are operating
 
   digitalWrite(RedPin, LOW);
   digitalWrite(YellowPin, HIGH);
-  //digitalWrite(GreenPin, LOW);
 
   //begining connection to serial with 19200 baud rate
   Serial.begin(Baud);
@@ -119,8 +117,8 @@ void loop() {
 
     if(!Occupied) {
       unsigned long Current_Time = millis();
-     // UltraSonic();
-      AccXYZ();
+      UltraSonic();
+      //AccXYZ();
       //MotionSensor();
       if (imuAlert || ultraSonicAlert || mSensValue){
         if(Current_Time-Lost_Time >= Sampling_Period){
@@ -159,7 +157,14 @@ void AccXYZ(){
   if (AccZ > 1.1 || AccZ < 0.8 || AccX > 0.15 || AccX < -0.15 || AccY > 0.15 || AccY < -0.15){
     imuAlert = true;
   } 
-
+  Serial.print("Acc X: ");
+  Serial.print(AccX);
+  Serial.print("  Acc Y: ");
+  Serial.print(AccY);
+  Serial.print("  Acc Z: ");
+  Serial.print(AccZ);
+  Serial.print("  Alert: ");
+  Serial.println(imuAlert);
 }
 
 void UltraSonic(){
@@ -170,8 +175,8 @@ void UltraSonic(){
   digitalWrite(trigPin, LOW);
   duration = pulseIn(echoPin, HIGH);
 
-  //Serial.println();
-  //Serial.print(duration);
+  // Serial.println();
+  // Serial.print(duration);
 
   if (duration < 500){
     ultraSonicAlert = true;
