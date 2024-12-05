@@ -32,7 +32,6 @@ volatile unsigned long lastInterruptTime = 0;
 volatile bool isPressed = false;
 
 char Input_Key_Code[7];
-char Admin[7] = {"012345"};
 char Reset_Cmd[6] = "RESET";
 struct TX_Payload Reset = {5, "RESET"};
 bool Heat_Sensor_Error = false;
@@ -52,7 +51,7 @@ TimerHandle_t Keypad_Timeout_Timer;
 
 TaskHandle_t RX_Message_Handle;
 TaskHandle_t Keypad_Reader = NULL;
-TaskHandle_t LED_Flash;
+
 
 void setup() {
   // // Start Serial communication
@@ -177,6 +176,15 @@ void Task_LED_Flash(void *pvParameters) {
   }
 }
 
+int Test_Entry_Code(const char* code) {
+  int x = Valid_Admin_Codes.searchEntry(code);
+  if (x < 0) {
+    return 0;
+  } else {
+      return 1;
+  }
+}
+
 // Task 1 function 
 void Keypad_Read(void *pvParameters) {
   
@@ -250,8 +258,16 @@ void Keypad_Read(void *pvParameters) {
         Valid_Input_Presses = 0;
         digitalWrite(PurplePin, LOW);
         xTimerStop(Keypad_Timeout_Timer, 0);
-        if(strncmp((const char*)Input_Key_Code, Admin, 6) == 0){
-        void Disable_Alarm()
+        if(Test_Entry_Code((const char*)Input_Key_Code)){
+          Disable_Alarm();
+          alarmTriggered = false;
+          MqttMessage mqttMessage;
+          mqttMessage.topic = "ELEC520/alarm";
+          mqttMessage.payload = "Alarm Disabled";
+          // Send the MQTT message to the queue
+          if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
+              Serial.println("Failed to send message to MQTT queue");
+          }
         }
         else {
           Serial.println("Wrong code");
@@ -266,22 +282,21 @@ void Keypad_Read(void *pvParameters) {
     }
     // Reset pressed flag 
       isPressed = false;
-
-      
   }
 }
 
 void Disable_Alarm(){
-          Serial.println("Right admin code");
-          vTaskSuspend(LED_Flash);
-          ledcWrite(PinkPin, 0);
-          ledcWrite(BluePin, 0);
-          ledcWrite(GreenPin, 0);
-          digitalWrite(YellowPin, HIGH);
-          digitalWrite(RedPin_1, LOW); 
-          digitalWrite(RedPin_2, LOW);
-          Transmit_To_Bus(&Reset);
+  Serial.println("Right admin code");
+  vTaskSuspend(LED_Flash);
+  ledcWrite(PinkPin, 0);
+  ledcWrite(BluePin, 0);
+  ledcWrite(GreenPin, 0);
+  digitalWrite(YellowPin, HIGH);
+  digitalWrite(RedPin_1, LOW); 
+  digitalWrite(RedPin_2, LOW);
+  Transmit_To_Bus(&Reset);
 }
+
 void IRAM_ATTR Key_Pressed_ISR() {
   unsigned long interruptTime = millis();
   // Debounce logic
@@ -356,6 +371,7 @@ void RX_Message_Process(void *pvParameters) {
         if(strcmp((const char*)RX_Message_Payload, "Fire Call") == 0){
           Serial.println("It's a call event");
           Set_Alarm(PinkPin, Pduty);
+          alarmTriggered = true;
           mqttMessage.topic = "ELEC520/alarm";
           // Assign the payload from RX_Message_Payload
           mqttMessage.payload = String((char*)RX_Message_Payload);
@@ -366,6 +382,7 @@ void RX_Message_Process(void *pvParameters) {
         }
         else if (strcmp((const char*)RX_Message_Payload, "Heat Alarm") == 0){
           Set_Alarm(BluePin, Bduty);
+          alarmTriggered = true;
           mqttMessage.topic = "ELEC520/alarm";
           // Assign the payload from RX_Message_Payload
           mqttMessage.payload = String((char*)RX_Message_Payload);
@@ -375,12 +392,14 @@ void RX_Message_Process(void *pvParameters) {
           }
         }
         else if(strcmp((const char*)RX_Message_Payload, "Sensor Error") == 0){
+          
           Heat_Sensor_Error = true;
           //wake mqtt message thread
         }
       }
       else if(Sender_Node_Type == Intrusion_Node) {
           Set_Alarm(GreenPin, Gduty);
+          alarmTriggered = true;
           MqttMessage mqttMessage;
           mqttMessage.topic = "ELEC520/alarm";
           // Assign the payload from RX_Message_Payload
@@ -392,13 +411,13 @@ void RX_Message_Process(void *pvParameters) {
           //tone(SPEAKER_PIN, 400,500);
       }
 
-      Serial.print("Received message: ");
-      for (int i = 0; i < MESSAGE_LENGTH; i++) {
-        Serial.print(receivedMessage[i], HEX);
-        Serial.print(" ");
-      }
-      Serial.println();
-      Serial.println((char*)RX_Message_Payload);
+      // Serial.print("Received message: ");
+      // for (int i = 0; i < MESSAGE_LENGTH; i++) {
+      //   Serial.print(receivedMessage[i], HEX);
+      //   Serial.print(" ");
+      // }
+      // Serial.println();
+      // Serial.println((char*)RX_Message_Payload);
     }
   }
 }

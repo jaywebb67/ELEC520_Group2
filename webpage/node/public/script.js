@@ -196,6 +196,8 @@ function stopFlashing() {
     const overlay = document.getElementById('alarmOverlay');
     overlay.style.display = 'none'; // Hide the overlay
     alarmActive = false;
+    const loginPrompt = document.getElementById('loginPrompt');
+    loginPrompt.style.display = 'none'; // Show the login prompt  
 }
 
 // Function to prompt admin login and disable the alarm
@@ -203,7 +205,7 @@ function promptAdminLogin(alarmType) {
   const loginPrompt = document.getElementById('loginPrompt');
   loginPrompt.style.display = 'block'; // Show the login prompt
 
-  const loginHeader = document.getElementById('loginHeader');
+  const loginHeader = document.getElementById('alarmHeader');
   loginHeader.textContent = alarmType || 'Alarm Triggered'; // Display the alarm type
 }
 
@@ -227,10 +229,15 @@ mqttClient.on('message', function (topic, message) {
     plotTemperature(payload);
   } else if (topic === 'ELEC520/imu') {
     plotIMU(payload);
-  } else if (topic === 'ELEC520/alarm' && payload === 'alarm triggered') {
+  } else if (topic === 'ELEC520/alarm') {
     console.log('ELEC502/Alarm msg received - Alarm triggered')
-    startFlashing(payload); // Start the flashing effect
-    promptAdminLogin(payload); // Prompt admin login
+    if(payload === "Alarm Disabled"){
+      stopFlashing();
+    }
+    else if(payload !== "Alarm Enabled"){
+      startFlashing(payload); // Start the flashing effect
+      promptAdminLogin(payload); // Prompt admin login
+    }
   }
 });
 
@@ -253,6 +260,14 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
           alert('Alarm disabled by admin.');
           stopFlashing();
           document.getElementById('loginPrompt').style.display = 'none';
+          mqttClient.publish('ELEC520/alarm','Alarm Disabled', (err) => {
+            if (err) {
+                console.error('Failed to publish MQTT message:', err);
+              //  alert({ message: 'User added but failed to notify via MQTT' });
+            }
+            console.log('Published to MQTT: Alarm Disabled');
+            //res.json({ success: true, message: 'User added successfully' });
+          });
       } else {
           alert(result.message || 'You do not have admin privileges.');
       }
@@ -816,6 +831,7 @@ function deviceConfig(){
   const devID = document.getElementById("dname").value;
   const newLocation = document.getElementById("devLocation").value;
   const newGateType = document.getElementById("gateType").value;
+  const newDeviceType = document.getElementById("devType").value;
   let newBuilding;
   if(document.getElementById("devBuildingInput").style.display == "none"){
     newBuilding = newLocation;
@@ -823,7 +839,7 @@ function deviceConfig(){
   else{
     newBuilding = document.getElementById("devBuilding").value;
   }
-  console.log('Attempting to configure gate device:', { devID, location, gateType });
+  console.log('Attempting to configure gate device:', { devID, location, gateType, devType });
 
   fetch('/api/devConfig', {
     method: 'POST',
@@ -833,6 +849,7 @@ function deviceConfig(){
       location: newLocation,
       gateType: newGateType,
       building: newBuilding,
+      deviceType: newDeviceType,
     }),
   })
     .then((response) => response.json())
@@ -859,7 +876,6 @@ function deviceConfig(){
       document.getElementById("errorTextDevice").innerText = 'An error occurred. Please try again.';
       document.getElementById("errorTextDevice").style.color = 'red';
     });
-
 }
 
 // Function to toggle visibility of devBuildingInput based on gateType selection
