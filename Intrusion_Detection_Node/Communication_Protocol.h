@@ -2,6 +2,7 @@
 #define COMMUNICATION_PROTOCOL_H
 
 #include <Arduino.h>
+#include <EEPROM.h>
 
 
 #if defined(ARDUINO_AVR_NANO)
@@ -30,6 +31,7 @@ extern SoftwareSerial RS485Serial;
 #define NANO                0
 #define Bus_Monitor_Pin     2
 #define MESSAGE_LENGTH      40
+#define location_address    0
 
 //.h v2.3
 struct TX_Payload {
@@ -58,6 +60,7 @@ extern unsigned char RX_Message[40];
 extern unsigned char Forward[40];
 extern unsigned char RX_Message_Payload[35];
 extern unsigned char Ack_message[9];
+extern unsigned char IntroMessage[6];
 extern uint8_t Sender_Address;
 extern uint8_t Sender_Node_Type;
 extern uint8_t Addressee;
@@ -86,6 +89,7 @@ void print_Struct(struct Set_Up_Pins* message);
 unsigned char Read_Serial_Port();
 unsigned char Process_RX_Transmission();
 void Acknowledge(unsigned char* dest, unsigned char* message = Ack_message );
+void Load_Vitals();
 void Introduction();
 void Forward_Messasage();
 void RX_Message_Process(void *pvParameters);

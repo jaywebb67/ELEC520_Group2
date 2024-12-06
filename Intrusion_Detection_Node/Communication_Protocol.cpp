@@ -28,6 +28,7 @@ unsigned char TX_Message[40]; // sized for start byte,
 unsigned char RX_Message[40];
 unsigned char Forward[40];
 unsigned char RX_Message_Payload[35];
+unsigned char IntroMessage[6] = {'I', 'n', 't', 'r', 'o', Home_Address};
 unsigned char Ack_message[9] = { 
   START_BYTE, 
   Home_Address, 
@@ -44,7 +45,7 @@ uint8_t Sender_Address;
 uint8_t Sender_Node_Type;
 uint8_t Addressee;
 
-const struct TX_Payload Intro = {1, {Location}};
+const struct TX_Payload Intro = {6, IntroMessage};
 
 
 //*****USER FUNCTIONS*****//
@@ -89,7 +90,7 @@ void Comms_Set_Up(){
   #endif
   attachInterrupt(digitalPinToInterrupt(Bus_Monitor_Pin), Bus_Monitor_Pin_interrupt, CHANGE);
   delay(1000);
-  //Introduction();
+  Load_Vitals();
 }
 
 
@@ -372,6 +373,22 @@ void Read_Serial_Data() {
   }
 }
 
+void Load_Vitals(){
+   // Initialize storedValue to check if the EEPROM has been written
+  int checkValue = EEPROM.read(location_address);
+
+  // Check if the stored value is valid (i.e., not uninitialized EEPROM content)
+  if (checkValue != 255) { // EEPROM is initially set to 255 (default erased state)
+    Home_Address = checkValue;
+    Serial.print("Home Address read from EEPROM: ");
+    Serial.println(Home_Address);
+  } else {
+    Serial.println("No stored value found in EEPROM, initializing...");
+    //call the introduction  function
+    Introduction();
+  }
+}
+
 void Introduction() {
   bool reply_received = 0;
   Transmit_To_Bus((TX_Payload*)&Intro);
@@ -380,7 +397,7 @@ void Introduction() {
       Addressee = Read_Serial_Port();
       if(Addressee == Home_Address) {
         Home_Address = RX_Message_Payload[0];
-        Destination_Address = RX_Message_Payload[1];
+        EEPROM.write(location_address, Home_Address);
         reply_received = 1;
       }
     }

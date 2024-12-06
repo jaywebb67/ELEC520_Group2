@@ -1,6 +1,7 @@
 #include "Communication_Protocol.h"
 #include "DHT.h"
 
+
 #define DHTPIN 5     // what pin we're connected to
 #define DHTTYPE DHT22   // DHT 22  (AM2302)
 #define Alarm_Pin 3 
@@ -11,7 +12,7 @@
 uint8_t Location;
 uint8_t Home_Node_Type = 0x32;
 uint8_t Home_Address = 0x28;    //Default address for initial set up
-uint8_t Destination_Address = 0x13;   //Default address for initial set up
+uint8_t Destination_Address = 0x0A;   //Default address for initial set up
 uint8_t Node_3 = 0x33;
 const char Respond_Cmd[8] = "RESPOND";
 const char Reset_Cmd[6] = "RESET";
@@ -130,3 +131,5 @@ void loop() {
     Last_Time_Temp = Current_Time;
   }
 }
+
+

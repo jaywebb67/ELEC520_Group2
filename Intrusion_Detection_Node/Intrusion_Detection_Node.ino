@@ -10,7 +10,7 @@
 uint8_t Location;
 uint8_t Home_Node_Type = 0x42;
 uint8_t Home_Address = 0x0F;    //Default address for initial set up
-uint8_t Destination_Address = 0xFF;   //Default address for initial set up
+uint8_t Destination_Address = 0x0A;   //Default address for initial set up
 uint8_t Node_3 = 0x33;
 const char Respond_Cmd[8] = "RESPOND";
 const char Reset_Cmd[6] = "RESET";
