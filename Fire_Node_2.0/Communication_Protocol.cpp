@@ -14,13 +14,12 @@ QueueHandle_t RX_Queue;
 #endif
 
 
-//global variable for bus busy state
+//global variable for bus busy state flag
 volatile bool Bus_Busy = 0;
-//global variable for safe to transmit state
+//global variable for safe to transmit state flag
 bool Safe_To_Transmit = 0;
-//uint16_t Bus_Monitor_Pin;
-extern uint8_t board;
-
+//global variable for rewrite memory flag
+bool ReW_Mem;
 
 
 //message format: Start byte, Sender address byte, Destination address byte, Sender device type code, Length byte, 33 message characters, Checksum byte, End byte.

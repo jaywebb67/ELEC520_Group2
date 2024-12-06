@@ -20,37 +20,23 @@ const char No_User_Cmd[7] = "NVuser";
 
 const struct TX_Payload Intrusion = {14, "Intruder alarm"};
 const struct TX_Payload Alive = {8, "I'm here"};
-//// Ultrasonic Setup
-// pin config
-//const int trigPin = 6;
-//const int echoPin = 7;
-// variables
+
+// Ultrasonic Setup
 bool ultraSonicAlert = false;
 
-
-//// LED setup
-// pin config
-//const int RedPin = 5;
-// variables
+// LED setup
 long duration;
 
-
-//// IMU Setup
-// Stuff For Registers n' Wire etc 
+// IMU Setup
 const int MPU = 0x68;
 // variables
 float AccX, AccY, AccZ;
 bool imuAlert = false;
 
-
-//// Motion sensor setup
-// pin config
-//const int mSensPin = 8;
-// variables
+// Motion sensor setup
 int mSensValue = 0;
 
 
-//// called on loading
 void setup() {
 
   // configuring pins
@@ -78,7 +64,6 @@ void setup() {
 }
 
 
-// called on repeat
 void loop() {
   uint32_t Sampling_Period = 5000;
   uint32_t Flash_Freq = 500;
@@ -104,7 +89,7 @@ void loop() {
         }
         else if (strcmp((char*)RX_Message_Payload, "Remove") == 0){
           ReW_Mem = false;
-          Rest_Params(ReW_Mem);
+          Reset_Params(ReW_Mem);
         }
       }
         // Handle specific commands

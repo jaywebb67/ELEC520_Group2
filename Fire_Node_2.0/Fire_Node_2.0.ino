@@ -113,7 +113,7 @@ void loop() {
       }
       else if (strcmp((char*)RX_Message_Payload, "Remove") == 0){
         ReW_Mem = false;
-        Rest_Params(ReW_Mem);
+        Reset_Params(ReW_Mem);
       }
     }
     

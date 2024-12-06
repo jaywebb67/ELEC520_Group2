@@ -20,8 +20,7 @@ TaskHandle_t RX_Message_Handle;
 volatile bool Bus_Busy = 0;
 //global variable for safe to transmit state
 bool Safe_To_Transmit = 0;
-//uint16_t Bus_Monitor_Pin;
-extern uint8_t board;
+//global variable for rewrite memory flag
 bool ReW_Mem;
 
 //message format: Start byte, Sender address byte, Destination address byte, Sender device type code, Length byte, 33 message characters, Checksum byte, End byte.
@@ -96,40 +95,6 @@ void Comms_Set_Up(){
 }
 
 
-/*Call this function to read the serial port message is stored to RX_Message_Payload, sender address, and sender node type are stored
-   function returns the intended recipiant address*/
-// unsigned char Read_Serial_Port() {
-//   int index = 0;
-//   // Clear RX_Message buffer, Forward buffer and RX_Message_Payload buffer to prevent message overlaps
-//   memset(RX_Message, 0, sizeof(RX_Message));
-//   memset(Forward, 0, sizeof(Forward));
-//   // Clear 
-//   memset(RX_Message_Payload, 0, sizeof(RX_Message_Payload));
-
-//   // Read bytes until end byte (0x03) is found
-//   while (RS485Serial.available()) {
-//     char incomingByte = RS485Serial.read();
-//     RX_Message[index++] = incomingByte;
-//     Forward[index++] = incomingByte;
-
-//     // Check for buffer overflow
-//     if (index >= sizeof(RX_Message) - 1) {
-//       Serial.println("Buffer overflow");
-//       break;
-//     }
-
-//     // Check for end byte
-//     if (incomingByte == 0x03) {
-//       break;
-//     }
-//   }
-//   // Null-terminate the string
-//   RX_Message[index] = '\0';
-//   Forward[index] = '\0';
-//   // Process the message
-//   unsigned char address = Decode_Message(RX_Message, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
-//   return address;
-// }
 unsigned char Read_Serial_Port() {
   int index = 0;
   bool startByteFound = false;

@@ -184,10 +184,10 @@ void mqttPublisher(void* parameter) {
             Destination_Address = 0x13;
             struct TX_Payload msg;
             if(message.payload == "Alarm Disabled"){
-              msg = {14, 'Alarm Disabled'};
+              msg = {14, 'Vuser'};
             }
             else{
-              msg = {13, 'Alarm Enabled'};
+              msg = {13, 'NVuser'};
             }
             Transmit_To_Bus(&msg);
             Destination_Address = temp;
