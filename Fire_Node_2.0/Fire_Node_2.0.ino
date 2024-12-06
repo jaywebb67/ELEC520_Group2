@@ -100,18 +100,23 @@ void loop() {
         alarm_Pressed = false;
         digitalWrite(RedPin, LOW);
       }
-      if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
+      else if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
         uint8_t temp = Destination_Address;
         Destination_Address = MQTT_Address;
         Transmit_To_Bus(&Alive);
         Destination_Address = temp;
       }
+      else if (strcmp((char*)RX_Message_Payload, "New ADD") == 0){
+        Home_Address = RX_Message_Payload[7];
+        ReW_Mem = true;
+        Reset_Params(ReW_Mem);
+      }
+      else if (strcmp((char*)RX_Message_Payload, "Remove") == 0){
+        ReW_Mem = false;
+        Rest_Params(ReW_Mem);
+      }
     }
-    else if((Sender_Address == Node_3)&&(Addressee == Home_Address )){
-      Serial.println((char*)RX_Message_Payload);
-      Serial.print("Sender's address: ");
-      Serial.println(Sender_Address, HEX);
-    }
+    
     else{
       Serial.print("Address mismatch: Received ");
       Serial.print(Addressee, HEX);

@@ -51,7 +51,9 @@ extern uint8_t Location;
 extern uint8_t Home_Node_Type;
 extern uint8_t Destination_Address;
 extern uint8_t Sender_Address;
+extern uint8_t ADD_Reset;
 extern volatile bool Bus_Busy;
+extern bool ReW_Mem;
 extern bool Safe_To_Transmit;
 extern struct Set_Up_Pins Nano;
 extern struct Set_Up_Pins Esp;
@@ -94,6 +96,7 @@ void Introduction();
 void Forward_Messasage();
 void RX_Message_Process(void *pvParameters);
 void onUartRx();
+void Reset_Params(bool x);
 
 
 #endif

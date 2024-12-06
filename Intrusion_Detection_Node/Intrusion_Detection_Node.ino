@@ -92,19 +92,24 @@ void loop() {
       Serial.print("RX_Message: ");
       Print_Message(RX_Message, 7 + RX_Message[4]);
       Serial.println((char*)RX_Message_Payload);
+
       if(Addressee == Home_Address){
         if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
           Transmit_To_Bus(&Alive);
         } 
-        Serial.println((char*)RX_Message_Payload);
-        Serial.print("Sender's address: ");
-        Serial.println(Sender_Address, HEX);
-        Serial.print("Sender is a node of type: ");
-        Serial.println(Sender_Node_Type, HEX);
+        else if (strcmp((char*)RX_Message_Payload, "New ADD") == 0){
+          Home_Address = RX_Message_Payload[7];
+          ReW_Mem = true;
+          Reset_Params(ReW_Mem);
+        }
+        else if (strcmp((char*)RX_Message_Payload, "Remove") == 0){
+          ReW_Mem = false;
+          Rest_Params(ReW_Mem);
+        }
       }
         // Handle specific commands
       else if(Addressee == Location){
-         if (strcmp((char*)RX_Message_Payload, User_Cmd) == 0) {
+        if (strcmp((char*)RX_Message_Payload, User_Cmd) == 0) {
         Occupied = true;
         digitalWrite(YellowPin, LOW);
         }
