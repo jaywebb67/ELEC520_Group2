@@ -23,8 +23,8 @@ const char* mqttServer = "40c06ef97ec5427eb54aa49e5c03c12c.s1.eu.hivemq.cloud";
 const uint16_t mqttPort = 8883;
 
 // WiFi credentials
-const char* ssid = "BT-CJC2PH";//"Jays_WiFi";//
-const char* password = "NfECRbGtfV37Hd";//"jaywebb1";//
+const char* ssid = "Jays_WiFi";//"BT-CJC2PH";//
+const char* password = "jaywebb1";//"NfECRbGtfV37Hd";//
 
 //topic for recieving user credential updates
 String usersTopic = "";
@@ -110,7 +110,7 @@ void MQTT_SetUp(){
     // Check if the queue was created successfully
     if (mqttPublishQueue == NULL) {
       Serial.println("Failed to create MQTT publish queue");
-      while (1); // Stop execution
+      //while (1); // Stop execution
     }
 
     xTaskCreatePinnedToCore(mqttPublisher, "mqttPublisher", 5000, NULL, 1, &mqttPublishHandle, 1);
@@ -165,14 +165,19 @@ void MQTT_task(void* pvParameters) {
 
 void mqttPublisher(void* parameter) {
   MqttMessage message; // Create a struct instance to hold topic and payload
-
+  struct TX_Payload txPayload;
   while (true) {
     // Wait for an MqttMessage from the queue
     if (xQueueReceive(mqttPublishQueue, &message, portMAX_DELAY) == pdPASS) {
       // Publish the payload to the specified MQTT topic
-      if(message.topic == "ELEC520/userAccess"){
-        String payload = message.payload +" "+ clientId;
-        mqttClient.publish(message.topic.c_str(), payload.c_str());
+        String combinedPayload;
+        if (message.topic == "ELEC520/userAccess") {
+          combinedPayload = message.payload + " " + clientId; // Add clientId to the payload
+        } else {
+          combinedPayload = message.payload; // Use the original payload
+        }
+      if(mqttClient.connected()){
+        mqttClient.publish(message.topic.c_str(), message.payload.c_str());
         // Log the published message
         Serial.print("Published to topic: ");
         Serial.print("ELEC520/userAccess");
@@ -180,14 +185,15 @@ void mqttPublisher(void* parameter) {
         Serial.println(message.payload.c_str());
       }
       else{
-        mqttClient.publish(message.topic.c_str(), message.payload.c_str());
-        // Log the published message
-        Serial.print("Published to topic: ");
-        Serial.print(message.topic.c_str());
-        Serial.print(" | Payload: ");
-        Serial.println(message.payload.c_str());
-      }
+        txPayload.length = min(combinedPayload.length(), sizeof(txPayload.message) - 1); // Set length
+        strncpy(txPayload.message, combinedPayload.c_str(), txPayload.length);          // Copy payload
+        txPayload.message[txPayload.length] = '\0'; // Ensure null-termination
+        uint8_t temp = Destination_Address;
+        Destination_Address = MQTT_Address;
+        Transmit_To_Bus(&txPayload);
+        Destination_Address = temp;
 
+      }
     }
   }
 }
@@ -513,13 +519,21 @@ void mqttHandler(void* pvParameters) {
           }
           else if (receivedMsg.topic == "ELEC520/alarm") {
               Serial.println(receivedMsg.payload);
+              uint8_t temp = Destination_Address;
+              Destination_Address = Intrusion_Node;
+              struct TX_Payload msg;
               if (receivedMsg.payload == "Alarm Disabled"){
-                //msg = {6,"Vuser"};
                 if(alarmTriggered){
                   Serial.println("Disabling Alarm triggered!");
                   Disable_Alarm();
                 }
+                msg = {6,"Vuser"};
               }
+              if(receivedMsg.payload == "Alarm Enabled"){
+                msg = {7,"NVuser"};
+              }
+              Transmit_To_Bus(&msg);
+              Destination_Address = temp;
           }
 
           receivedMsg.topic = "";

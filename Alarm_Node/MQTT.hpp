@@ -20,13 +20,15 @@ extern TaskHandle_t mqttReceiveHandle;
 
 extern QueueHandle_t mqttPublishQueue;
 
+extern bool alarmTriggered;
+extern bool I_am_Forwarder;
 extern bool restartFlag;
 extern String clientId;
 extern String ping;
-extern bool alarmTriggered;
-extern bool I_am_Forwarder;
 
 extern CharBuffer Valid_Admin_Codes;
+
+extern struct TX_Payload Reset; 
 
 struct MqttMessage {
   String topic;
@@ -46,8 +48,6 @@ struct Mqtt_newNode_Message {
   int dest_address;
 
 };
-
-extern struct TX_Payload Reset; 
 
 extern void Disable_Alarm();
 
