@@ -205,6 +205,16 @@
                                     <input type="text" name="devBuilding" placeholder="Enter device's building" id="devBuilding" required>
                                 </div>
 
+                                <div class="input-container" id="deviceTypeInput">
+                                    <label for="devBuilding">Device/Node Type</label>
+                                    <select name="deviceType" id="devType" required>
+                                        <option value="Gate">Gate Device Type</option>
+                                        <option value="Alarm">Alarm Device Type</option>
+                                        <option value="Intrusion">Intrusion Device Type</option>
+                                        <option value="Fire">Fire Device Type</option>
+                                    </select>
+                                </div>
+
                                 <div class="input-container">
                                 <label for="gateType">Gate Type</label>
                                 <select id="gateType" name="gateType" required>

@@ -27,6 +27,68 @@ const MQTT_OPTIONS = {
 // Create and connect the MQTT client
 const mqttClient = mqtt.connect(MQTT_BROKER_URL, MQTT_OPTIONS);
 
+let currentLeader = null; // Holds the current leader
+
+// Function to elect a leader
+async function electLeader() {
+  const deviceStatusRef = admin.database().ref('deviceStatus');
+  try {
+    const deviceStatusSnapshot = await deviceStatusRef.once('value');
+    const deviceStatus = deviceStatusSnapshot.val();
+
+    if (!deviceStatus) {
+      console.log('No devices found in database.');
+      currentLeader = null;
+      return;
+    }
+
+    // Filter Alarm devices online
+    const alarmDevices = Object.values(deviceStatus).filter(
+      (device) => device.deviceID.startsWith('Alarm') && device.status === 'online'
+    );
+
+    // If no Alarm devices are online, filter Gate devices online
+    let leaderCandidates = alarmDevices;
+    if (alarmDevices.length === 0) {
+      leaderCandidates = Object.values(deviceStatus).filter(
+        (device) => device.deviceID.startsWith('Gate') && device.status === 'online'
+      );
+    }
+
+    // Randomly select a leader from available candidates
+    if (leaderCandidates.length > 0) {
+      const randomIndex = Math.floor(Math.random() * leaderCandidates.length);
+      currentLeader = leaderCandidates[randomIndex];
+
+      // Extract the deviceID for publishing
+      const leaderDeviceID = currentLeader.deviceID;
+      
+      mqttClient.publish(
+        "ELEC520/forwarder",
+        leaderDeviceID, // Pass the deviceID as the payload
+        {
+          qos: 0, // Change to 2 for QoS 2 if needed
+          retain: true, // Retain the message
+        },
+        (err) => {
+          if (err) {
+            console.error(`Failed to publish to topic "ELEC520/forwarder":`, err);
+          } else {
+            console.log(`Successfully published to topic "ELEC520/forwarder" with QoS 0 and retained: "${leaderDeviceID}"`);
+          }
+        }
+      );
+      
+      console.log(`New leader elected: ${currentLeader.deviceID}`);
+    } else {
+      currentLeader = null;
+      console.log('No available devices to elect as leader.');
+    }
+  } catch (error) {
+    console.error('Error electing leader:', error);
+  }
+}
+
 // Handle connection events
 mqttClient.on('connect', () => {
   console.log('Connected to MQTT broker');
@@ -35,6 +97,13 @@ mqttClient.on('connect', () => {
       console.error('Failed to subscribe to ELEC520/users/view:', err);
     } else {
       console.log('Subscribed to ELEC520/users/view');
+    }
+  });
+  mqttClient.subscribe('ELEC520/users/admin/view', (err) => {
+    if (err) {
+      console.error('Failed to subscribe to ELEC520/users/admin/view:', err);
+    } else {
+      console.log('Subscribed to ELEC520/users/admin/view');
     }
   });
   mqttClient.subscribe('ELEC520/devices/view', (err) => {
@@ -58,6 +127,14 @@ mqttClient.on('connect', () => {
       console.log('Subscribed to ELEC520/devicePing');
     }
   });
+  mqttClient.subscribe("ELEC520/users/admin/needUpdate", (err) => {
+    if (err) {
+      console.error("Failed to subscribe to topic:", err);
+    } else {
+      console.log("Subscribed to ELEC520/users/admin/needUpdate");
+    }
+  });
+  //electLeader();
 });
 
 // Handle incoming messages
@@ -152,18 +229,13 @@ mqttClient.on('message', async (topic, message) => {
       try {
         const newDeviceID = await getDeviceID(deviceType);
         // Publish the new device ID to the 'ELEC520/devices/update' topic
-        mqttClient.publish(
-          'ELEC520/devices/update',
-          newDeviceID,
-          { qos: 0 }, // Change to 2 for QoS 2
-          (err) => {
-            if (err) {
-              console.error(`Failed to publish to topic ${topic}:`, err);
-            } else {
-              console.log(`Successfully published to topic ${topic} with QoS 1: "${payload}"`);
-            }
+        mqttClient.publish('ELEC520/devices/update',newDeviceID, (err) => {
+          if (err) {
+            console.error(`Failed to publish to topic ${topic}:`, err);
+          } else {
+            console.log(`Successfully published to topic ${topic} with QoS 1: "${newDeviceID}"`);
           }
-        );
+        });
       } catch (error) {
         console.error('Error processing ELEC520/devices/view message:', error);
       }
@@ -239,7 +311,7 @@ mqttClient.on('message', async (topic, message) => {
       } catch (error) {
           console.error('Error processing ELEC520/userAccess:', error);
       }
-  }
+    }
   
         
     if (topic === 'ELEC520/devicePing') {
@@ -252,50 +324,209 @@ mqttClient.on('message', async (topic, message) => {
           console.error('Invalid message format. Expected "deviceID status".');
           return;
       }
+
+          // If currentLeader is null and a device comes online, elect a leader
+      if (!currentLeader && currentStatus === 'online') {
+        console.log(`Device ${deviceID} is online and no leader exists. Electing a leader...`);
+        await electLeader();
+      }
+
+      // If the current leader goes offline, elect a new leader
+      if (currentLeader && currentLeader.deviceID === deviceID && currentStatus === 'offline') {
+        console.log(`Leader ${deviceID} went offline. Electing a new leader...`);
+        await electLeader();
+      }
   
       //console.log(`Received access attempt: device ID=${deviceID}, Status=${currentStatus}`);
   
       try {
-          // Get the current date and time
-          const now = new Date();
-          const timeaccess = now.toISOString(); // Format as ISO string
-  
-          // Update the database with the access attempt details
-          const deviceStatusRef = admin.database().ref('deviceStatus');
-          const snapshot = await deviceStatusRef.once('value');
-          const deviceStatusData = snapshot.val() || []; // Default to an empty array if no data exists
+        // Get the current date and time
+        const now = new Date();
+        const timeaccess = now.toISOString(); // Format as ISO string
+    
+        // Reference the deviceStatus path in the database
+        const deviceStatusRef = admin.database().ref('deviceStatus');
+        const snapshot = await deviceStatusRef.once('value');
+        const deviceStatusData = snapshot.val() || {}; // Default to an empty object if no data exists
+    
+        // Reference the devices table to check if the deviceID exists
+        const devicesRef = admin.database().ref('devices');
+        const devicesSnapshot = await devicesRef.once('value');
+        const devices = devicesSnapshot.val() || {};
+    
+        // Check if the deviceID exists in the devices table
+        const deviceExists = Object.keys(devices).some(deviceType => {
+          const deviceList = devices[deviceType]; // Get the array of devices for this type
+          return Array.isArray(deviceList) && deviceList.some(device => device.deviceID === deviceID);
+        });
 
-          let deviceFound = false;
-
-          // Iterate through userAccess array to find an existing entry for the user
-          for (let i = 0; i < deviceStatusData.length; i++) {
-              if (deviceStatusData[i].deviceID === deviceID) {
-                  // Update the existing entry
-                  deviceStatusData[i].lastPing = timeaccess;
-                  deviceStatusData[i].status = currentStatus;
-                  deviceFound = true;
-                  break;
-              }
-          }
-
-          // If no existing entry was found, create a new one
-          if (!deviceFound) {
-            deviceStatusData.push({
-              deviceID: deviceID,
-              lastPing: timeaccess,
-              status: currentStatus,
-            });
-          }
-
-          // Write the updated array back to the database
-          await deviceStatusRef.set(deviceStatusData);
-
-        //  console.log(`Access logged: device=${deviceID}, Status=${currentStatus}, Time=${timeaccess}`);
-          notifyDeviceStatusUpdate();
+    
+        if (!deviceExists) {
+            console.warn(`Device ID ${deviceID} not found in devices table. Ignoring ping.`);
+            return; // Exit the function
+        }
+    
+        // Update or create the deviceStatus entry
+        if (deviceStatusData[deviceID]) {
+            // Update existing entry
+            deviceStatusData[deviceID].deviceID = deviceID;
+            deviceStatusData[deviceID].lastPing = timeaccess;
+            deviceStatusData[deviceID].status = currentStatus;
+        } else {
+            // Create a new entry
+            deviceStatusData[deviceID] = {
+                deviceID: deviceID,
+                lastPing: timeaccess,
+                status: currentStatus,
+            };
+        }
+    
+        // Write the updated object back to the database
+        await deviceStatusRef.set(deviceStatusData);
+    
+        // Notify about the update
+        notifyDeviceStatusUpdate();
       } catch (error) {
-          console.error('Error processing ELEC520/deviceStatus:', error);
+        console.error('Error processing ELEC520/deviceStatus:', error);
       }
-  } 
+    }  
+    
+    
+    if (topic === "ELEC520/users/admin/needUpdate") {
+      const deviceID = message.toString().trim();
+      console.log(`Received deviceID: ${deviceID}`);
+  
+      try {
+        // Get the database references
+        const devicesRef = admin.database().ref("devices");
+        const usersLastUpdatedRef = admin.database().ref("users/lastUpdated");
+  
+        // Retrieve the users last updated timestamp
+        const usersLastUpdatedSnapshot = await usersLastUpdatedRef.once("value");
+        const usersLastUpdated = usersLastUpdatedSnapshot.val()?.lastUpdated;
+  
+        // Retrieve the device's usersUpdated timestamp
+        const devicesSnapshot = await devicesRef.once("value");
+        const devicesData = devicesSnapshot.val();
+  
+        let deviceUsersUpdated = null;
+        // Search for the deviceID in the nested devices table
+        for (const [type, deviceList] of Object.entries(devicesData || {})) {
+          if (Array.isArray(deviceList)) {
+            const device = deviceList.find((d) => d.deviceID === deviceID);
+            if (device) {
+              deviceUsersUpdated = device.usersUpdated;
+              break;
+            }
+          }
+        }
+  
+        if (deviceUsersUpdated) {
+          console.log(`Device usersUpdated: ${deviceUsersUpdated}, Users lastUpdated: ${usersLastUpdated}`);
+  
+          const payload = deviceUsersUpdated === usersLastUpdated ? "0" : "1";
+          mqttClient.publish("ELEC520/users/admin/updateNeeded", payload, (err) => {
+            if (err) {
+              console.error("Failed to publish updateNeeded message:", err);
+            } else {
+              console.log(`Published updateNeeded message with payload: ${payload}`);
+            }
+          });
+        } else {
+          console.error("Device not found or usersUpdated key missing");
+        }
+      } catch (error) {
+        console.error("Error handling message:", error);
+      }
+    }
+
+    if (topic === "ELEC520/users/admin/view") {
+      const deviceID = message.toString().trim();
+      console.log("Received request to view admin users");
+    
+      try {
+        // Reference the 'users' section in the Firebase Realtime Database
+        const usersRef = admin.database().ref("users");
+        const snapshot = await usersRef.once("value");
+    
+        // Retrieve the data from the snapshot
+        const usersData = snapshot.val();
+        if (!usersData) {
+          console.error("No users found in the database.");
+          return;
+        }
+    
+        // Get the lastUpdated timestamp
+        const lastUpdated = usersData.lastUpdated?.lastUpdated;
+        if (!lastUpdated) {
+          console.error("No lastUpdated key found in the database.");
+          return;
+        }
+    
+        // Filter users with the 'admin' permission
+        const adminUsers = Object.entries(usersData)
+          .filter(([_, user]) => user.permissions === "admin")
+          .map(([key, user]) => ({
+            username: user.username,
+            gateCode: user.gateCode,
+          }));
+    
+        if (adminUsers.length === 0) {
+          console.log("No admin users found.");
+          return;
+        }
+    
+        // Publish each admin user's username and gate code
+        for (const adminUser of adminUsers) {
+          const payload = `${adminUser.username}:${adminUser.gateCode}`;
+          mqttClient.publish(
+            `ELEC520/users/admin/update/${deviceID}`,
+            payload,
+            { qos: 0 },
+            (err) => {
+              if (err) {
+                console.error(`Failed to publish admin user: ${payload}`, err);
+              } else {
+                console.log(`Published admin user: ${payload}`);
+              }
+            }
+          );
+        }
+    
+        // Update the `usersUpdated` value in the devices table for the given deviceID
+        const devicesRef = admin.database().ref("devices");
+        const devicesSnapshot = await devicesRef.once("value");
+        const devicesData = devicesSnapshot.val();
+    
+        let deviceUpdated = false;
+    
+        // Search for the deviceID and update its `usersUpdated` field
+        for (const [type, deviceList] of Object.entries(devicesData || {})) {
+          if (Array.isArray(deviceList)) {
+            for (let device of deviceList) {
+              if (device.deviceID === deviceID) {
+                device.usersUpdated = lastUpdated;
+                deviceUpdated = true;
+                break;
+              }
+            }
+          }
+          if (deviceUpdated) break;
+        }
+    
+        if (deviceUpdated) {
+          await devicesRef.set(devicesData);
+          console.log(`Updated usersUpdated for device ${deviceID} to ${lastUpdated}`);
+        } else {
+          console.log(`Device ${deviceID} not found in devices table.`);
+        }
+      } catch (error) {
+        console.error("Error processing admin view request:", error);
+      }
+    }
+    
+
+
 
 });
 

@@ -12,7 +12,6 @@ router.post('/add-user', async (req, res) => {
     }
 
     try {
-        // Check if the user already exists in the database
         const userRef = admin.database().ref(`users/${username}`);
         const snapshot = await userRef.once('value');
 
@@ -20,19 +19,16 @@ router.post('/add-user', async (req, res) => {
             return res.status(400).json({ success: false, message: 'User already exists' });
         }
 
-        // Generate a unique 6-digit gateCode
         let gateCode;
         const usersRef = admin.database().ref('users');
         let isUnique = false;
 
-
         while (!isUnique) {
-            gateCode = Math.floor(Math.random*1000000).toString().padStart(6,'0'); // Generate 6-digit code
+            gateCode = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
             const usersSnapshot = await usersRef.once('value');
             isUnique = !Object.values(usersSnapshot.val() || {}).some(user => user.gateCode === gateCode);
         }
 
-        // Save the user data in Firebase Realtime Database
         await userRef.set({
             password,
             location,
@@ -41,21 +37,49 @@ router.post('/add-user', async (req, res) => {
             gateCode
         });
 
-        // Publish the new user to the MQTT topic
-        const userPayload = `${username}:${gateCode}`;
-        mqttClient.publish('ELEC520/users/add', userPayload, (err) => {
-            if (err) {
-                console.error('Failed to publish MQTT message:', err);
-                return res.status(500).json({ message: 'User added but failed to notify via MQTT' });
-            }
-            console.log('Published new user to MQTT:', userPayload);
-            res.json({ success: true, message: 'User added successfully' });
+        const currentTime = new Date().toISOString();
+        await admin.database().ref('users/lastUpdated').set({ lastUpdated: currentTime });
+
+        // Retrieve gate devices with location matching the user's location
+        const gateDevicesRef = admin.database().ref('devices/Gate');
+        const gateDevicesSnapshot = await gateDevicesRef.once('value');
+        const gateDevices = Object.values(gateDevicesSnapshot.val() || []); // Ensure it's an array
+        const matchingGateDevices = gateDevices.filter(device => device.location === location);
+
+        const gateDeviceUpdates = matchingGateDevices.map(async device => {
+            const devicePayload = `${username}:${gateCode}`;
+            const topic = `ELEC520/users/add/${device.deviceID}`;
+            mqttClient.publish(topic, devicePayload, { qos: 0 }, err => {
+                if (err) console.error(`Failed to publish to topic ${topic}:`, err);
+            });
+            await admin.database().ref(`devices/Gate/${matchingGateDevices.indexOf(device)}`).update({ usersUpdated: currentTime });
         });
+
+        const alarmDevicesRef = admin.database().ref('devices/Alarm');
+        const alarmDevicesSnapshot = await alarmDevicesRef.once('value');
+        const alarmDevices = alarmDevicesSnapshot.val() || [];
+
+        const alarmDeviceUpdates = alarmDevices.map(async alarmDevice => {
+            await admin.database().ref(`devices/Alarm/${alarmDevices.indexOf(alarmDevice)}`).update({ usersUpdated: currentTime });
+        });
+
+        await Promise.all([...gateDeviceUpdates, ...alarmDeviceUpdates]);
+
+        if (permissions === 'admin') {
+            const adminPayload = `${username}:${gateCode}`;
+            mqttClient.publish('ELEC520/users/admin/add', adminPayload, { qos: 0 }, err => {
+                if (err) console.error('Failed to publish admin user MQTT message:', err);
+            });
+        }
+
+        return res.json({ success: true, message: 'User added successfully' });
     } catch (error) {
         console.error('Error adding user to Firebase:', error);
-        res.status(500).json({ success: false, message: 'Failed to add user' });
+        return res.status(500).json({ success: false, message: 'Failed to add user' });
     }
 });
+
+
 
   
 

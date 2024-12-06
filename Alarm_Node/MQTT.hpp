@@ -7,6 +7,9 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include "Communication_Protocol.h"
+#include "Char_Buffer.h"
+
+#define QUEUE_WAIT_TIME pdMS_TO_TICKS(100) // Wait for 100 milliseconds
 
 //NetworkClientSecure client;
 extern WiFiClientSecure client;
@@ -20,6 +23,10 @@ extern QueueHandle_t mqttPublishQueue;
 extern bool restartFlag;
 extern String clientId;
 extern String ping;
+extern bool alarmTriggered;
+extern bool I_am_Forwarder;
+
+extern CharBuffer Valid_Admin_Codes;
 
 struct MqttMessage {
   String topic;
@@ -40,6 +47,10 @@ struct Mqtt_newNode_Message {
 
 };
 
+extern struct TX_Payload Reset; 
+
+extern void Disable_Alarm();
+
 void MQTT_SetUp();
 
 void MQTT_task(void* pvParameters);
@@ -54,6 +65,6 @@ void mqttCallback(char* topic, byte* payload, unsigned int length);
 
 void mqttHandler(void* pvParameters);
 
-
+extern TaskHandle_t LED_Flash;
 
 #endif

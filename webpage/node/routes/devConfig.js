@@ -6,69 +6,67 @@ const mqttClient = require('../mqttclient'); // Import the MQTT client
 // Route to add a new user to Firebase
 // Route to add or update a gate device in Firebase
 router.post('/devConfig', async (req, res) => {
-    const { devID, location, gateType, building } = req.body;
+    const { devID, location, gateType, building, deviceType } = req.body;
 
-    if (!devID || !location || !gateType) {
+    if (!devID || !location || !gateType || !deviceType) {
         return res.status(400).json({ success: false, message: 'All fields are required.' });
     }
 
     try {
-        // Reference the 'devices/Gate' path in the database
-        const deviceRef = admin.database().ref('devices/Gate');
-        const snapshot = await deviceRef.once('value');
+        // Reference the 'devices' path in the database
+        const devicesRef = admin.database().ref(`devices/${deviceType}`);
+        const snapshot = await devicesRef.once('value');
 
         if (snapshot.exists()) {
-            const gates = snapshot.val();
+            const devices = snapshot.val();
 
-            // Find the index of the gate with the matching deviceID
-            const gateIndex = gates.findIndex(g => g.deviceID === devID);
+            // Check if the deviceID exists in the devices table
+            const deviceIndex = devices.findIndex(device => device.deviceID === devID);
 
-            if (gateIndex !== -1) {
-                // Update the existing gate
-                gates[gateIndex].location = location;
-                gates[gateIndex].gateType = gateType;
-                gates[gateIndex].building = building;
-                // Save the updated gates array back to the database
-                await deviceRef.set(gates);
+            if (deviceIndex !== -1) {
+                // Update the existing device
+                devices[deviceIndex].location = location;
+                devices[deviceIndex].gateType = gateType;
+                devices[deviceIndex].building = building;
+
+                // Save the updated devices array back to the database
+                await devicesRef.set(devices);
 
                 console.log('Device config updated successfully');
-                res.json({ success: true, message: 'Device config updated successfully' });
-            } else {
-                // If no matching gate is found, create a new one
-                gates.push({
-                    deviceID: devID,
-                    device_type: 'Gate', // Assuming a fixed device type for this case
-                    location,
-                    gateType,
-                    building,
+                // Publish the new user to the MQTT topic
+                const userPayload = `${devID}:${location}`;
+                mqttClient.publish('ELEC520/deviceConfig', userPayload, (err) => {
+                    if (err) {
+                        console.error('Failed to publish MQTT message:', err);
+                        return res.status(500).json({ message: 'User added but failed to notify via MQTT' });
+                    }
+                    console.log('Published new user to MQTT:', userPayload);
+                    res.json({ success: true, message: 'User added successfully' });
                 });
 
-                // Save the updated gates array back to the database
-                await deviceRef.set(gates);
-
-                console.log('Device config added successfully');
-                res.json({ success: true, message: 'Device config added successfully' });
+                res.json({ success: true, message: 'Device config updated successfully' });
+            } else {
+                // If no matching device is found, return a specific error
+                console.error('Device ID not found');
+                res.status(400).json({ 
+                    success: false, 
+                    message: 'Enter a valid device ID', 
+                });
             }
         } else {
-            // If no gates exist yet, create the first one
-            const newGate = [{
-                deviceID: devID,
-                device_type: 'Gate',
-                location,
-                gateType,
-                building,
-            }];
-
-            await deviceRef.set(newGate);
-
-            console.log('Device config added successfully');
-            res.json({ success: true, message: 'Device config added successfully' });
+            // If no devices exist in the table
+            console.error('No devices found in the database');
+            res.status(400).json({ 
+                success: false, 
+                message: 'Enter a valid device ID', 
+            });
         }
     } catch (error) {
-        console.error('Error adding/updating device config to Firebase:', error);
-        res.status(500).json({ success: false, message: 'Failed to add/update device config' });
+        console.error('Error updating device config in Firebase:', error);
+        res.status(500).json({ success: false, message: 'Failed to update device config' });
     }
 });
+
 
   
 
