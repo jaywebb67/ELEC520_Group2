@@ -1,8 +1,11 @@
 #include "MQTT.hpp"
 
+String stringLocation = "";
 String clientId = "";
 String ping = "";
 bool restartFlag = false;
+bool I_am_Forwarder = false;
+bool deviceConfig = false;
 
 TaskHandle_t mqttTaskHandle = NULL;
 TaskHandle_t mqttPublishHandle = NULL;
@@ -92,16 +95,6 @@ void MQTT_SetUp(){
     setClock();
 
     client.setCACert(isrg_root_x1_cert); // Use the certificate content
-    // Serial.println("Starting connection to MQTT server...");
-    // attempts = 0;
-    // while (!client.connect(mqttServer, mqttPort)) {
-    //     if(attempts>=10){
-    //       break;
-    //     }
-    //     Serial.print(".");
-    //     vTaskDelay(pdMS_TO_TICKS(1000));  
-    //     attempts++;
-    // }
     mqttClient.setServer(mqttServer,mqttPort);
     mqttClient.setCallback(mqttCallback);
 
@@ -116,7 +109,7 @@ void MQTT_SetUp(){
     // Check if the queue was created successfully
     if (mqttPublishQueue == NULL) {
       Serial.println("Failed to create MQTT publish queue");
-      while (1); // Stop execution
+      //while (1); // Stop execution
     }
 
     xTaskCreatePinnedToCore(mqttPublisher, "mqttPublisher", 5000, NULL, 1, &mqttPublishHandle, 1);
@@ -169,33 +162,42 @@ void MQTT_task(void* pvParameters) {
 
 void mqttPublisher(void* parameter) {
   MqttMessage message; // Create a struct instance to hold topic and payload
-
+  struct TX_Payload txPayload;
   while (true) {
     // Wait for an MqttMessage from the queue
     if (xQueueReceive(mqttPublishQueue, &message, portMAX_DELAY) == pdPASS) {
       // Publish the payload to the specified MQTT topic
-      if(message.topic == "ELEC520/userAccess"){
-        String payload = message.payload +" "+ clientId;
-        mqttClient.publish(message.topic.c_str(), payload.c_str());
-      }
-      else if((message.topic == "ELEC520/alarm")){
-        if(!mqttClient.connected()){
-            uint8_t temp = Destination_Address;
-            Destination_Address = 0x13;
-            struct TX_Payload msg;
-            if(message.payload == "Alarm Disabled"){
-              msg = {14, 'Alarm Disabled'};
-            }
-            else{
-              msg = {13, 'Alarm Enabled'};
-            }
-            Transmit_To_Bus(&msg);
-            Destination_Address = temp;
+        if(message.topic == "ELEC520/userAccess"){
+          String payload = message.payload +" "+ clientId;
+          mqttClient.publish(message.topic.c_str(), payload.c_str());
         }
-        else{
-          mqttClient.publish(message.topic.c_str(), message.payload.c_str());
+        else if((message.topic == "ELEC520/alarm")){
+          if(!mqttClient.connected()){
+              uint8_t temp = Destination_Address;
+              Destination_Address = 0x13;
+              struct TX_Payload msg;
+              if(message.payload == "Alarm Disabled"){
+                msg = {14, 'Alarm Disabled'};
+              }
+              else{
+                msg = {13, 'Alarm Enabled'};
+              }
+              Transmit_To_Bus(&msg);
+              Destination_Address = temp;
+          }
+          else{
+            mqttClient.publish(message.topic.c_str(), message.payload.c_str());
+          }
         }
-      }
+        else if(!mqttClient.connected()){
+          txPayload.length = min(message.payload.length(), sizeof(message.payload) - 1); // Set length
+          strncpy(txPayload.message, message.payload.c_str(), txPayload.length);          // Copy payload
+          txPayload.message[txPayload.length] = '\0'; // Ensure null-termination
+          uint8_t temp = Destination_Address;
+          Destination_Address = MQTT_Address;
+          Transmit_To_Bus(&txPayload);
+          Destination_Address = temp;
+        }
         
       // Log the published message
       // Serial.print("Published to topic: ");
@@ -245,25 +247,68 @@ void reconnect(bool onSetUp) {
           }
       }
     }
-
-    // Check and load device ID
-    if (LittleFS.exists("/deviceID.txt")) {
-        File file = LittleFS.open("/deviceID.txt", "r");
+    if(LittleFS.exists("/userCredentials.txt")) {
+        File file = LittleFS.open("/userCredentials.txt", "r");
         if (file) {
-            clientId = file.readStringUntil('\n');  // Read the device ID as a String
-            file.close();
-            clientId.trim();  // Remove any trailing newline or whitespace
-            ping = clientId + " online";
-            usersTopic = "ELEC520/users/update/"+clientId;
-            Serial.print("Loaded client ID: ");
-            Serial.println(clientId);
+            Serial.println("Reading user credentials from file...");
+
+            while (file.available()) {
+                String line = file.readStringUntil('\n'); // Read each line until newline
+                line.trim(); // Remove trailing whitespace or newlines
+
+                if (!line.isEmpty()) {
+                    char msg[15]; // Buffer to store the credential as a C-string
+                    line.toCharArray(msg, 15); // Convert String to char array
+                    Valid_Entrance_Codes.addEntry(msg); // Add the entry to the buffer
+                    Serial.print("User Credential added to buffer: ");
+                    Serial.println(msg); // Debugging: Print the added code
+                }
+            }
+
+            file.close(); // Close the file after reading
+            Serial.println("Finished loading user credentials.");
         } else {
-            Serial.println("Failed to read deviceID.txt");
+            Serial.println("Failed to open userCredentials.txt");
+        }
+    }
+    // Check and load device ID
+    if (LittleFS.exists("/deviceConfig.txt")) {
+        deviceConfig = false;
+        File file = LittleFS.open("/deviceConfig.txt", "r");
+        if (file) {
+            String line = file.readStringUntil('\n'); // Read the line as a string
+            file.close();
+            line.trim(); // Remove any trailing newline or whitespace
+
+            int separatorIndex = line.indexOf(':'); // Find the index of the colon separator
+            if (separatorIndex != -1) {
+                clientId = line.substring(0, separatorIndex); // Extract client ID
+                stringLocation = line.substring(separatorIndex + 1); // Extract stringLocation
+                clientId.trim(); // Trim any whitespace
+                stringLocation.trim(); // Trim any whitespace
+
+                ping = clientId + " online";
+                usersTopic = "ELEC520/users/update/" + clientId;
+
+                Serial.print("Loaded client ID: ");
+                Serial.println(clientId);
+                Serial.print("Loaded stringLocation: ");
+                Serial.println(stringLocation);
+            } else {
+                Serial.println("Invalid format in deviceConfig.txt. Expected 'clientID:stringLocation'.");
+
+            }
+        } else {
+            Serial.println("Failed to read deviceConfig.txt");
         }
     } else {
-        clientId = "Gate" + String(random(0xffff), HEX);
+        clientId = "Gate" + String(random(0xff), HEX);
+        stringLocation = "Unknown"; // Default stringLocation if file doesn't exist
         Serial.print("Generated client ID: ");
         Serial.println(clientId);
+        Serial.print("Default stringLocation: ");
+        Serial.println(stringLocation);
+        deviceConfig = true;
     }
 
     if (mqttClient.connected()) {
@@ -276,19 +321,27 @@ void reconnect(bool onSetUp) {
         if (mqttClient.connect(clientId.c_str(), "gateID", "Gatepass1", "ELEC520/devicePing", 0, true, willMessage.c_str())) {
             Serial.println("MQTT connected");
 
-            if (!LittleFS.exists("/deviceID.txt")) {
-                mqttClient.subscribe("ELEC520/devices/update", 0);
-                mqttClient.publish("ELEC520/devices/client", "Gate");
+            if (deviceConfig) { 
+                if (mqttClient.subscribe("ELEC520/devices/update", 0)) {
+                    Serial.println("Subscribed to ELEC520/devices/update with QoS 0");
+                } else {
+                    Serial.println("Failed to subscribe to ELEC520/devices/update");
+                }
+                mqttClient.publish("ELEC520/devices/view", "Gate");
             }
             if (onSetUp) {
-                if (mqttClient.subscribe("ELEC520/users/#", 0)) {
-                    Serial.println("Subscribed to ELEC520/users/# with QoS 0");
+                if (mqttClient.subscribe("ELEC520/users/updateNeeded", 0)) {
+                    Serial.println("Subscribed to ELEC520/users/updateNeeded with QoS 0");
                 } else {
-                    Serial.println("Failed to subscribe to ELEC520/users/#");
+                    Serial.println("Failed to subscribe to ELEC520/users/updateNeeded");
                 }
-                mqttClient.publish("ELEC520/users/view", clientId.c_str());
+                mqttClient.publish("ELEC520/users/needUpdate", clientId.c_str());
             }
-            mqttClient.subscribe("ELEC520/#", MQTTQOS2);
+            mqttClient.subscribe("ELEC520/alarm", 0);
+            mqttClient.subscribe("ELEC520/deviceConfig", 0);
+            mqttClient.subscribe("ELEC520/users/add",0);
+            mqttClient.subscribe("ELEC520/users/view",0);
+            mqttClient.subscribe("ELEC520/forwarder",0);            
         } else {
             Serial.print("MQTT connection failed, rc=");
             Serial.println(mqttClient.state());
@@ -343,74 +396,129 @@ void mqttHandler(void* pvParameters) {
                     Serial.println("Failed to open userCredentials.txt");
                 }
             }
-        else if (receivedMsg.topic == "ELEC520/users/view") {
-          // Clear the file at the start when viewing/updating users from database
-          File file = LittleFS.open("/userCredentials.txt", "w");
-          if (file) {
-              file.close();  // Close immediately to clear contents
-              Serial.println("User credentials file cleared.");
-          } else {
-              Serial.println("Failed to open /userCredentials.txt for clearing.");
-          }
-        }
-        else if (receivedMsg.topic == "ELEC520/devices/update") {
-            Serial.println(receivedMsg.payload);
-            // Open the credentials file in append mode
-            File file = LittleFS.open("/deviceID.txt", "w");
-            if (file) {
-                // Write the payload in 'user:password' format to the file
-                file.println(receivedMsg.payload); // Each entry goes on a new line
-                file.flush();  // Ensure data is written immediately
-                Serial.println("Device ID written to file: " + receivedMsg.payload);
-                clientId = receivedMsg.payload;
-                ping = clientId + " online"; 
-                file.close();
-                return;
-            } else {
-                Serial.println("Failed to open and write 'deviceID.txt'.");
+            else if (receivedMsg.topic == "ELEC520/users/view") {
+              // Clear the file at the start when viewing/updating users from database
+              File file = LittleFS.open("/userCredentials.txt", "w");
+              if (file) {
+                  file.close();  // Close immediately to clear contents
+                  Serial.println("User credentials file cleared.");
+              } else {
+                  Serial.println("Failed to open /userCredentials.txt for clearing.");
+              }
             }
-  
-            restartFlag = 1;
-        }
-        else if (receivedMsg.topic == usersTopic) {
-            Serial.println(receivedMsg.payload);
-
-            int separatorIndex = receivedMsg.payload.indexOf(':');  // Assuming a colon delimiter
-
-            if (separatorIndex != -1) {
+            else if (receivedMsg.topic == "ELEC520/devices/update") {
+                Serial.println(receivedMsg.payload);
                 // Open the credentials file in append mode
-                File file = LittleFS.open("/userCredentials.txt", "a");
-  //              file.setBufferSize(1024);  // Set buffer size if needed
-
+                File file = LittleFS.open("/deviceConfig.txt", "w");
                 if (file) {
-                    // Write username, then colon, then password to the same line but separately
-                    file.println(receivedMsg.payload); // Write the password and move to a new line
-                    file.flush();  // Ensure all data is written to storage
-                    // Close the file
+                    // Write the payload in 'user:password' format to the file
+                    file.print(receivedMsg.payload); // Each entry goes on a new line
+                    file.print(":Unknown");
+                    file.flush();  // Ensure data is written immediately
                     file.close();
-
-                    char msg[15];
-                    receivedMsg.payload.toCharArray(msg, 15);
-                    Valid_Entrance_Codes.addEntry(msg);  
-                    /*why not
-                    char Kcode[7];
-                    copy_keycode(msg, Kcode);
-                    Valid_Entrance_Codes.addEntry(Kcode);
-                    */
-                    Serial.println("User credentials updated in file.");
-                
+                    Serial.println("Device ID written to file: " + receivedMsg.payload);
+                    clientId = receivedMsg.payload;
+                    ping = clientId + " online"; 
+                    usersTopic = "ELEC520/users/update/" + clientId;
+                    
                 } else {
-                    Serial.println("Failed to open /userCredentials.txt for writing.");
+                    Serial.println("Failed to open and write 'deviceID.txt'.");
                 }
-            } else {
-                  Serial.println("Invalid payload format. Expected 'username:password'");
+      
+                restartFlag = 1;
             }
-        }
-        else if (receivedMsg.topic == "ELEC520/alarm") {
-            Serial.println(receivedMsg.payload);
-        }
-        receivedMsg.topic = "";
-        receivedMsg.payload = "";
+            else if (receivedMsg.topic == "ELEC520/forwarder") {
+              Serial.println(receivedMsg.payload);
+              if(receivedMsg.payload == clientId.c_str()){
+                I_am_Forwarder = true;
+              }
+              else{
+                I_am_Forwarder = false;
+              }
+            
+            }
+            else if (receivedMsg.topic == "ELEC520/users/updateNeeded") {
+                if(receivedMsg.payload == "1"){
+                  if (mqttClient.subscribe(usersTopic.c_str(), 0)) {
+                      Serial.print("Subscribed to ");
+                      Serial.print(usersTopic.c_str());
+                      Serial.println(" with QoS 0");
+                  } else {
+                      Serial.println("Failed to subscribe to ELEC520/users/update");
+                  }
+                  mqttClient.publish("ELEC520/users/view", clientId.c_str());
+                }
+                else {
+                    Serial.println("No update needed");
+                }
+
+            }
+            else if (receivedMsg.topic == usersTopic) {
+                Serial.println(receivedMsg.payload);
+                // Check if payload starts with 'lastUpdate:'
+                if (!receivedMsg.payload.startsWith("lastUpdated:")) {
+                    // Ignore this message and exit the processing block
+                  char msg[15];
+                  receivedMsg.payload.toCharArray(msg, 15);
+                  Valid_Entrance_Codes.addEntry(msg);  
+                  int separatorIndex = receivedMsg.payload.indexOf(':');  // Assuming a colon delimiter
+
+                  if (separatorIndex != -1) {
+                      // Open the credentials file in append mode
+                      File file = LittleFS.open("/userCredentials.txt", "a");
+                      //file.setBufferSize(1024);  // Set buffer size if needed
+
+                      if (file) {
+                          // Write username, then colon, then password to the same line but separately
+                          file.println(receivedMsg.payload); // Write the password and move to a new line
+                          file.flush();  // Ensure all data is written to storage
+                          // Close the file
+                          file.close();
+                          Serial.println("User credentials updated in file.");
+                      
+                      } else {
+                          Serial.println("Failed to open /userCredentials.txt for writing.");
+                      }
+                  } else {
+                        Serial.println("Invalid payload format. Expected 'username:password'");
+                  }    
+                }  
+            }
+            else if (receivedMsg.topic == "ELEC520/deviceConfig") {
+              Serial.println(receivedMsg.payload);
+              // Clear the file at the start when viewing/updating users from database
+              File file = LittleFS.open("/deviceConfig.txt", "w");
+              if (file) {
+                  String line = ""; // Read the line as a string
+                  receivedMsg.payload.trim();
+                  file.println(receivedMsg.payload); // Write the password and move to a new line
+                  file.flush();  // Ensure all data is written to storage
+                  // Close the file
+                  file.close();
+                  line =  receivedMsg.payload;// Remove any trailing newline or whitespace
+
+                  int separatorIndex = line.indexOf(':'); // Find the index of the colon separator
+                  if (separatorIndex != -1) {
+                      clientId = line.substring(0, separatorIndex); // Extract client ID
+                      stringLocation = line.substring(separatorIndex + 1); // Extract stringLocation
+                      clientId.trim(); // Trim any whitespace
+                      stringLocation.trim(); // Trim any whitespace
+                      Serial.print("Loaded client ID: ");
+                      Serial.println(clientId);
+                      Serial.print("Loaded stringLocation: ");
+                      Serial.println(stringLocation);
+                  } else {
+                      Serial.println("Invalid format in deviceConfig.txt. Expected 'clientID:stringLocation'.");
+                  }
+              } else {
+                  Serial.println("Failed to open /deviceConfig.txt for clearing.");
+              }
+            }
+            else if (receivedMsg.topic == "ELEC520/alarm") {
+                Serial.println(receivedMsg.payload);
+            }
+            receivedMsg.topic = "";
+            receivedMsg.payload = "";
         }
     }
 }

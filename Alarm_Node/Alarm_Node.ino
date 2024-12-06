@@ -309,6 +309,21 @@ void IRAM_ATTR Key_Pressed_ISR() {
   }
   lastInterruptTime = interruptTime;
 }
+
+void Configure_New_Node(uint8_t senderType, const char* nodeName) {
+    Serial.print("Configuring new node: ");
+    Serial.println(nodeName);
+
+    // Optionally notify via MQTT
+    MqttMessage mqttMessage;
+    mqttMessage.topic = "ELEC520/newNode";
+    mqttMessage.payload = String("Node Configured: ") + nodeName;
+    if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
+        Serial.println("Failed to send node configuration notification to MQTT queue.");
+    }
+}
+
+
 // RS485 serial port task
 void RX_Message_Process(void *pvParameters) {
   unsigned char receivedMessage[MESSAGE_LENGTH];
@@ -317,16 +332,38 @@ void RX_Message_Process(void *pvParameters) {
       memset(RX_Message_Payload, 0, sizeof(RX_Message_Payload));
       Addressee = Decode_Message(receivedMessage, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
       // Process received message
+
       Serial.print("Sent from node of type: ");
       Serial.println(Sender_Node_Type);
-      if((Addressee == MQTT_Address) && (I_am_Forwarder)) {
-        // parse message into correct mqtt message struct 
+
+      if (RX_Message_Payload[0] == 'I' &&
+          RX_Message_Payload[1] == 'n' &&
+          RX_Message_Payload[2] == 't' &&
+          RX_Message_Payload[3] == 'r' &&
+          RX_Message_Payload[4] == 'o') {
+            Serial.println("New node detected. Configuring...");
+                // Format payload for the new node
+            MqttMessage mqttMessage;
+            char newNodePayload[32]; // Adjust size as needed
+            snprintf(newNodePayload, sizeof(newNodePayload), "%s:%02X", Sender_Node_Type, (const char*)RX_Message_Payload[5]);
+            mqttMessage.topic = "ELEC520/newNode";
+            // Send the MQTT message to the queue
+            if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
+                Serial.println("Failed to send message to MQTT queue");
+            }
+
+
+            Configure_New_Node(Sender_Node_Type,(const char*)RX_Message_Payload[5] );
+      }
+      else if((Addressee == MQTT_Address) && (I_am_Forwarder)) {
         // Create an MQTT message structure
         MqttMessage mqttMessage;
 
         // Assign topic based on the received message type (example logic, adjust as needed)
-        if (Sender_Node_Type == Fire_Node) {  // Example: Fire sensor type
-            if(strcmp((const char*)RX_Message_Payload, "Fire1 online") == 0){
+        if(strcmp((const char*)RX_Message_Payload, "Intro") == 0){
+                mqttMessage.topic = "ELEC520/deviceConfig";            
+        } else if (Sender_Node_Type == Fire_Node) {  // Example: Fire sensor type
+            if(strcmp((const char*)RX_Message_Payload, "online") == 0){
                 mqttMessage.topic = "ELEC520/devicePing";
             }
             else{
@@ -351,7 +388,7 @@ void RX_Message_Process(void *pvParameters) {
             Serial.println("Failed to send message to MQTT queue");
         }
       }
-      if(Addressee == Home_Address){
+      else if(Addressee == Home_Address){
         uint8_t temp = Destination_Address;
         Destination_Address = Intrusion_Node;
         struct TX_Payload msg;
@@ -365,7 +402,7 @@ void RX_Message_Process(void *pvParameters) {
         Destination_Address = temp;
       }
       
-      if(Sender_Node_Type == Fire_Node){
+      else if(Sender_Node_Type == Fire_Node){
         MqttMessage mqttMessage;
         Serial.println("It's a fire node");
         if(strcmp((const char*)RX_Message_Payload, "Fire Call") == 0){

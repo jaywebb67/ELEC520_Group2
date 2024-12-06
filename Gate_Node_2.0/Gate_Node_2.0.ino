@@ -4,12 +4,13 @@
 #include "MQTT.hpp"
 #include "driver/uart.h"
 #include "driver/gpio.h"
-#include "Communication_Protocol.h"
+//#include "Communication_Protocol.h"
 
 #define DEVICE_NAME "Gate 1"
 #define I2C_SLAVE_ADDRESS 0x03 // Address of the slave device
 #define SDA_2 5 
 #define SCL_2 0
+
 
 
 struct TX_Q {

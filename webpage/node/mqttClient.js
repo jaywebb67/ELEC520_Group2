@@ -134,6 +134,13 @@ mqttClient.on('connect', () => {
       console.log("Subscribed to ELEC520/users/admin/needUpdate");
     }
   });
+  mqttClient.subscribe("ELEC520/users/needUpdate", (err) => {
+    if (err) {
+      console.error("Failed to subscribe to topic:", err);
+    } else {
+      console.log("Subscribed to ELEC520/users/needUpdate");
+    }
+  });
   //electLeader();
 });
 
@@ -144,8 +151,6 @@ mqttClient.on('message', async (topic, message) => {
       try {
         // Extract the deviceID from the payload
         const deviceID = message.toString().trim();
-        //console.log(`Raw message received: "${message}"`);
-        //console.log(`Extracted deviceID: "${deviceID}"`);
     
         if (!deviceID) {
           console.error("No deviceID provided in the MQTT message payload.");
@@ -191,7 +196,19 @@ mqttClient.on('message', async (topic, message) => {
     
         console.log(`Found devices for location ${location}: ${deviceIDs}`);
     
-        // Process each user and publish to relevant topics
+        // Retrieve the latest usersUpdated timestamp
+
+        // Update users and publish to relevant topics
+        const devicesRef = admin.database().ref("devices");
+        const devicesSnapshot = await devicesRef.once("value");
+        const devicesData = devicesSnapshot.val();
+    
+        const usersLastUpdatedRef = admin.database().ref("users/lastUpdated");
+    
+        // Retrieve the users last updated timestamp
+        const usersLastUpdatedSnapshot = await usersLastUpdatedRef.once("value");
+        const usersLastUpdated = usersLastUpdatedSnapshot.val()?.lastUpdated;
+    
         for (const user of users) {
           const payload = `${user.username}:${user.gateCode}`;
     
@@ -212,16 +229,41 @@ mqttClient.on('message', async (topic, message) => {
               }
             );
     
+            // Update the `usersUpdated` key for the device
+            let deviceUpdated = false;
+    
+            for (const [type, deviceList] of Object.entries(devicesData || {})) {
+              if (Array.isArray(deviceList)) {
+                for (let device of deviceList) {
+                  if (device.deviceID === id) {
+                    device.usersUpdated = usersLastUpdated;
+                    deviceUpdated = true;
+                    break;
+                  }
+                }
+              }
+              if (deviceUpdated) break;
+            }
+    
+            if (deviceUpdated) {
+              console.log(`Updated usersUpdated for device ${id} to ${usersLastUpdated}`);
+            } else {
+              console.log(`Device ${id} not found in devices table.`);
+            }
+    
             // Add a delay to prevent flooding
             // await delay(100);
           }
         }
+    
+        // Commit the updates to the database
+        await devicesRef.set(devicesData);
+        console.log('Updated devices in the database with new usersUpdated timestamps.');
       } catch (error) {
         console.error('Error processing request:', error);
       }
-    }
+    } 
     
-
     if (topic === 'ELEC520/devices/view') {
       const deviceType = message.toString().trim(); // Extract the device type from the payload
       console.log(`Received device type: ${deviceType}`);
@@ -392,23 +434,29 @@ mqttClient.on('message', async (topic, message) => {
     }  
     
     
-    if (topic === "ELEC520/users/admin/needUpdate") {
+    if (topic === "ELEC520/users/admin/needUpdate" || topic === "ELEC520/users/needUpdate") {
       const deviceID = message.toString().trim();
       console.log(`Received deviceID: ${deviceID}`);
-  
+    
       try {
+        // Determine the target topic based on the input topic
+        const targetTopic =
+          topic === "ELEC520/users/admin/needUpdate"
+            ? "ELEC520/users/admin/updateNeeded"
+            : "ELEC520/users/updateNeeded";
+    
         // Get the database references
         const devicesRef = admin.database().ref("devices");
         const usersLastUpdatedRef = admin.database().ref("users/lastUpdated");
-  
+    
         // Retrieve the users last updated timestamp
         const usersLastUpdatedSnapshot = await usersLastUpdatedRef.once("value");
         const usersLastUpdated = usersLastUpdatedSnapshot.val()?.lastUpdated;
-  
+    
         // Retrieve the device's usersUpdated timestamp
         const devicesSnapshot = await devicesRef.once("value");
         const devicesData = devicesSnapshot.val();
-  
+    
         let deviceUsersUpdated = null;
         // Search for the deviceID in the nested devices table
         for (const [type, deviceList] of Object.entries(devicesData || {})) {
@@ -420,16 +468,16 @@ mqttClient.on('message', async (topic, message) => {
             }
           }
         }
-  
+    
         if (deviceUsersUpdated) {
           console.log(`Device usersUpdated: ${deviceUsersUpdated}, Users lastUpdated: ${usersLastUpdated}`);
-  
+    
           const payload = deviceUsersUpdated === usersLastUpdated ? "0" : "1";
-          mqttClient.publish("ELEC520/users/admin/updateNeeded", payload, (err) => {
+          mqttClient.publish(targetTopic, payload, (err) => {
             if (err) {
-              console.error("Failed to publish updateNeeded message:", err);
+              console.error(`Failed to publish updateNeeded message to ${targetTopic}:`, err);
             } else {
-              console.log(`Published updateNeeded message with payload: ${payload}`);
+              console.log(`Published updateNeeded message with payload: ${payload} to ${targetTopic}`);
             }
           });
         } else {
@@ -439,7 +487,7 @@ mqttClient.on('message', async (topic, message) => {
         console.error("Error handling message:", error);
       }
     }
-
+    
     if (topic === "ELEC520/users/admin/view") {
       const deviceID = message.toString().trim();
       console.log("Received request to view admin users");

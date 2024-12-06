@@ -9,6 +9,8 @@
 #include "Char_Buffer.h"
 #include "Communication_Protocol.h"
 
+#define QUEUE_WAIT_TIME pdMS_TO_TICKS(100) // Wait for 100 milliseconds
+
 //NetworkClientSecure client;
 extern WiFiClientSecure client;
 extern PubSubClient mqttClient;
@@ -16,13 +18,15 @@ extern PubSubClient mqttClient;
 extern TaskHandle_t mqttTaskHandle;
 extern TaskHandle_t mqttReceiveHandle;
 
-
 extern QueueHandle_t mqttPublishQueue;
 
-
+extern bool I_am_Forwarder;
 extern bool restartFlag;
 extern String clientId;
 extern String ping;
+
+extern struct TX_Payload Reset; 
+
 // Create a CharBuffer object with 10 entries, each of size 6 characters 
 extern CharBuffer Valid_Entrance_Codes;
 extern CharBuffer Current_Codes_In_Use;
