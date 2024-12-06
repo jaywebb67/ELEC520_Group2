@@ -22,6 +22,7 @@ volatile bool Bus_Busy = 0;
 bool Safe_To_Transmit = 0;
 //uint16_t Bus_Monitor_Pin;
 extern uint8_t board;
+bool ReW_Mem;
 
 //message format: Start byte, Sender address byte, Destination address byte, Sender device type code, Length byte, 33 message characters, Checksum byte, End byte.
 unsigned char TX_Message[40]; // sized for start byte,
@@ -41,6 +42,7 @@ unsigned char Ack_message[9] = {
   '\0' // Null-terminator if needed 
   };
 
+uint8_t ADD_Reset;
 uint8_t Sender_Address;
 uint8_t Sender_Node_Type;
 uint8_t Addressee;
@@ -459,8 +461,15 @@ void RX_Message_Process(void *pvParameters) {
 #endif
 
 
-
-
+//write function to reset address if reset_address message is received
+void Reset_Params(bool x){
+  if(x){
+    EEPROM.write(location_address, Home_Address);
+  }
+  else{
+    EEPROM.write(location_address, 0xFF);   //reset eeprom to default setting 11111111 this will force device to ask for a new address on boot
+  }
+}
 
 
 

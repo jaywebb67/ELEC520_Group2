@@ -41,6 +41,7 @@ unsigned char Ack_message[9] = {
   };
 unsigned char IntroMessage[6] = {'I', 'n', 't', 'r', 'o', Home_Address};
 
+uint8_t ADD_Reset;
 uint8_t Sender_Address;
 uint8_t Sender_Node_Type;
 uint8_t Addressee;
@@ -426,3 +427,13 @@ void RX_Message_Process(void *pvParameters) {
 }
 #endif
 
+
+//write function to reset address if reset_address message is received
+void Reset_Params(bool x){
+  if(x){
+    EEPROM.write(location_address, Home_Address);
+  }
+  else{
+    EEPROM.write(location_address, 0xFF);   //reset eeprom to default setting 11111111 this will force device to ask for a new address on boot
+  }
+}
