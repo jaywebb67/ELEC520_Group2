@@ -14,6 +14,8 @@ uint8_t Home_Node_Type = 0x32;
 uint8_t Home_Address = 0x28;    //Default address for initial set up
 uint8_t Destination_Address = 0x0A;   //Default address for initial set up
 uint8_t Node_3 = 0x33;
+
+
 const char Respond_Cmd[8] = "RESPOND";
 const char Reset_Cmd[6] = "RESET";
 volatile bool alarm_Pressed = false;
@@ -26,7 +28,7 @@ uint32_t count = 0;
 const struct TX_Payload Fire_1 = {9, "Fire Call"};
 const struct TX_Payload Fire_2 = {12, "Sensor error"};
 const struct TX_Payload Fire_3 = {10, "Heat Alarm"};
-const struct TX_Payload Alive = {8, "Fire1 online"};
+const struct TX_Payload Alive = {11, "Fire online"};
 struct TX_Payload Hello = {2, "Hi"};
 
 DHT dht(DHTPIN, DHTTYPE);
@@ -100,12 +102,6 @@ void loop() {
         alarm_Pressed = false;
         digitalWrite(RedPin, LOW);
       }
-      else if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
-        uint8_t temp = Destination_Address;
-        Destination_Address = MQTT_Address;
-        Transmit_To_Bus(&Alive);
-        Destination_Address = temp;
-      }
       else if (strcmp((char*)RX_Message_Payload, "New ADD") == 0){
         Home_Address = RX_Message_Payload[7];
         ReW_Mem = true;
@@ -116,7 +112,14 @@ void loop() {
         Reset_Params(ReW_Mem);
       }
     }
-    
+    if(Addressee == Home_Node_Type){
+      if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
+        uint8_t temp = Destination_Address;
+        Destination_Address = MQTT_Address;
+        Transmit_To_Bus(&Alive);
+        Destination_Address = temp;
+      }
+    }
     else{
       Serial.print("Address mismatch: Received ");
       Serial.print(Addressee, HEX);

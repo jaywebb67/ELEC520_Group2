@@ -132,7 +132,9 @@ void MQTT_task(void* pvParameters) {
     reconnect(1); // Initial connection attempt
     unsigned long lastPingTime = millis();
     unsigned long lastConnectionAttempt = millis();
-
+    unsigned long lastIntrusionPing = millis();
+    unsigned long lastFirePing = millis();
+    struct TX_Payload pingPayload = {8,"RESPOND"};    
     while (true) {
         if (restartFlag) {
             esp_restart(); // Restart the ESP if the restart flag is set
@@ -155,6 +157,20 @@ void MQTT_task(void* pvParameters) {
                 lastConnectionAttempt = millis();
                 reconnect(1); // Attempt to reconnect
             }
+        }
+        if (millis()-lastFirePing >=10000){
+          lastFirePing = millis();
+          uint8_t temp = Destination_Address;
+          Destination_Address = Fire_Node;
+          Transmit_To_Bus(&pingPayload);
+          Destination_Address = temp;
+        }
+        if (millis()-lastIntrusionPing >=10000){
+          lastIntrusionPing = millis();
+          uint8_t temp = Destination_Address;
+          Destination_Address = Intrusion_Node;
+          Transmit_To_Bus(&pingPayload);
+          Destination_Address = temp;
         }
     }
 }

@@ -44,7 +44,9 @@ volatile uint8_t Valid_Input_Presses = 0;
 volatile unsigned long lastInterruptTime = 0;
 volatile bool isPressed = false;
 bool alarmEnabled = true;
-
+String newNodePayload = "";
+char firePing[32] ;
+char intrusionPing[32];
 // Define task handles
 TaskHandle_t Keypad_Reader = NULL;
 TaskHandle_t Bluetooth_Task_Handle = NULL; // Task handle for Bluetooth task
@@ -359,26 +361,35 @@ void RX_Message_Process(void *pvParameters) {
         if(strcmp((const char*)RX_Message_Payload, "Intro") == 0){
                 mqttMessage.topic = "ELEC520/deviceConfig";            
         } else if (Sender_Node_Type == Fire_Node) {  // Example: Fire sensor type
-            if(strcmp((const char*)RX_Message_Payload, "online") == 0){
+            if(strcmp((const char*)RX_Message_Payload, "Fire online") == 0){
                 mqttMessage.topic = "ELEC520/devicePing";
+                snprintf(firePing, sizeof(firePing), "Fire online:%02X", Addressee);
+                mqttMessage.payload = firePing.c_str();
             }
             else{
                 mqttMessage.topic = "ELEC520/temperature";
+                // Assign the payload from RX_Message_Payload
+                mqttMessage.payload = String((char*)RX_Message_Payload);
             }
         } else if (Sender_Node_Type == Intrusion_Node) {  // Example: Temperature node type
             if(strcmp((const char*)RX_Message_Payload, "SMB302 online") == 0){
                 mqttMessage.topic = "ELEC520/devicePing";
+                if(strcmp((const char*)RX_Message_Payload, "Intrusion online") == 0){
+                  mqttMessage.topic = "ELEC520/devicePing";
+                  snprintf(intrusionPing, sizeof(intrusionPing), "Intrusion online:%02X", Addressee);
+                  mqttMessage.payload = intrusionPing.c_str();
+                }
             }
             else{
                 mqttMessage.topic = "ELEC520/imu";
+                // Assign the payload from RX_Message_Payload
+                mqttMessage.payload = String((char*)RX_Message_Payload);
             }
         } else {
             mqttMessage.topic = "Home/Unknown";  // Default topic for unclassified nodes
+            // Assign the payload from RX_Message_Payload
+            mqttMessage.payload = String((char*)RX_Message_Payload);
         }
-
-        // Assign the payload from RX_Message_Payload
-        mqttMessage.payload = String((char*)RX_Message_Payload);
-
         // Send the MQTT message to the queue
         if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
             Serial.println("Failed to send message to MQTT queue");
@@ -418,6 +429,16 @@ void RX_Message_Process(void *pvParameters) {
           alarmTriggered = true;
           mqttMessage.topic = "ELEC520/alarm";
           // Assign the payload from RX_Message_Payload
+          mqttMessage.payload = String((char*)RX_Message_Payload);
+          // Send the MQTT message to the queue
+          if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
+              Serial.println("Failed to send message to MQTT queue");
+          }
+        }
+        else if (strcmp((const char*)RX_Message_Payload, "Fire Alive") == 0){
+          mqttMessage.topic = "ELEC520/devicePing";
+          // Assign the payload from RX_Message_Payload
+          snprintf(RX_Message_Payload)
           mqttMessage.payload = String((char*)RX_Message_Payload);
           // Send the MQTT message to the queue
           if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
