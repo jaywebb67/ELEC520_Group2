@@ -335,18 +335,125 @@ void RX_Message_Process(void *pvParameters) {
       memset(RX_Message_Payload, 0, sizeof(RX_Message_Payload));
       Addressee = Decode_Message(receivedMessage, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
       // Process received message
-      Serial.print("Received message: ");
-      for (int i = 0; i < MESSAGE_LENGTH; i++) {
-        Serial.print(receivedMessage[i], HEX);
-        Serial.print(" ");
+
+      Serial.print("Sent from node of type: ");
+      Serial.println(Sender_Node_Type);
+
+      if (strncmp((const char*)RX_Message_Payload, "Intro", 5) == 0) {
+            Serial.println("New node detected. Configuring...");
+                // Format payload for the new node
+            MqttMessage mqttMessage;
+            snprintf(newNodePayload, sizeof(newNodePayload), "Intro:%02X", Sender_Node_Type);
+            mqttMessage.topic = "ELEC520/devices/view";
+            mqttMessage.payload = newNodePayload;
+            // Send the MQTT message to the queue
+            if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
+                Serial.println("Failed to send message to MQTT queue");
+            }
       }
-      Serial.println();
-      Serial.println((char*)RX_Message_Payload);
+      else if((Addressee == MQTT_Address) && (I_am_Forwarder)) {
+        // Create an MQTT message structure
+        MqttMessage mqttMessage;
+
+        // Assign topic based on the received message type (example logic, adjust as needed)
+        if(strcmp((const char*)RX_Message_Payload, "Intro") == 0){
+                mqttMessage.topic = "ELEC520/deviceConfig";            
+        } else if (Sender_Node_Type == Fire_Node) {  // Example: Fire sensor type
+            if(strcmp((const char*)RX_Message_Payload, "online") == 0){
+                mqttMessage.topic = "ELEC520/devicePing";
+            }
+            else{
+                mqttMessage.topic = "ELEC520/temperature";
+            }
+        } else if (Sender_Node_Type == Intrusion_Node) {  // Example: Temperature node type
+            if(strcmp((const char*)RX_Message_Payload, "SMB302 online") == 0){
+                mqttMessage.topic = "ELEC520/devicePing";
+            }
+            else{
+                mqttMessage.topic = "ELEC520/imu";
+            }
+        } else {
+            mqttMessage.topic = "Home/Unknown";  // Default topic for unclassified nodes
+        }
+
+        // Assign the payload from RX_Message_Payload
+        mqttMessage.payload = String((char*)RX_Message_Payload);
+
+        // Send the MQTT message to the queue
+        if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
+            Serial.println("Failed to send message to MQTT queue");
+        }
+      }
+      else if(Addressee == Home_Address){
+        uint8_t temp = Destination_Address;
+        Destination_Address = Intrusion_Node;
+        struct TX_Payload msg;
+        if(strcmp((const char*)RX_Message_Payload, "Alarm Enabled") == 0){
+          msg = {7,"NVuser"};
+        }
+        if(strcmp((const char*)RX_Message_Payload, "Alarm Disabled") == 0){
+          msg = {6,"Vuser"};
+        }
+        Transmit_To_Bus(&msg);
+        Destination_Address = temp;
+      }
+      
+      else if(Sender_Node_Type == Fire_Node){
+        MqttMessage mqttMessage;
+        Serial.println("It's a fire node");
+        if(strcmp((const char*)RX_Message_Payload, "Fire Call") == 0){
+          Serial.println("It's a call event");
+          Set_Alarm(PinkPin, Pduty);
+          alarmTriggered = true;
+          mqttMessage.topic = "ELEC520/alarm";
+          // Assign the payload from RX_Message_Payload
+          mqttMessage.payload = String((char*)RX_Message_Payload);
+          // Send the MQTT message to the queue
+          if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
+              Serial.println("Failed to send message to MQTT queue");
+          }
+        }
+        else if (strcmp((const char*)RX_Message_Payload, "Heat Alarm") == 0){
+          Set_Alarm(BluePin, Bduty);
+          alarmTriggered = true;
+          mqttMessage.topic = "ELEC520/alarm";
+          // Assign the payload from RX_Message_Payload
+          mqttMessage.payload = String((char*)RX_Message_Payload);
+          // Send the MQTT message to the queue
+          if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
+              Serial.println("Failed to send message to MQTT queue");
+          }
+        }
+        else if(strcmp((const char*)RX_Message_Payload, "Sensor Error") == 0){
+          
+          Heat_Sensor_Error = true;
+          //wake mqtt message thread
+        }
+      }
+      else if(Sender_Node_Type == Intrusion_Node) {
+          Set_Alarm(GreenPin, Gduty);
+          alarmTriggered = true;
+          MqttMessage mqttMessage;
+          mqttMessage.topic = "ELEC520/alarm";
+          // Assign the payload from RX_Message_Payload
+          mqttMessage.payload = String((char*)RX_Message_Payload);
+          // Send the MQTT message to the queue
+          if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
+              Serial.println("Failed to send message to MQTT queue");
+          }
+          //tone(SPEAKER_PIN, 400,500);
+      }
+
+      // Serial.print("Received message: ");
+      // for (int i = 0; i < MESSAGE_LENGTH; i++) {
+      //   Serial.print(receivedMessage[i], HEX);
+      //   Serial.print(" ");
+      // }
+      // Serial.println();
+      // Serial.println((char*)RX_Message_Payload);
     }
   }
 }
-
-
 
 // Task 4 function
 void LCD_Thread(void *pvParameters) {

@@ -21,6 +21,7 @@ volatile unsigned char buffer[MESSAGE_LENGTH];
 volatile unsigned char bufferIndex = 0;
 bool I_am_Forwarder = false;
 bool Forward_To_MQTT = false;
+char newNodePayload[32]; // Adjust size as needed
 
 //ESP32-s3 WROOM pins
 const int rowPins[4] = {42, 41, 40, 39};     // Row pins connected to the keypad
@@ -310,20 +311,6 @@ void IRAM_ATTR Key_Pressed_ISR() {
   lastInterruptTime = interruptTime;
 }
 
-void Configure_New_Node(uint8_t senderType, const char* nodeName) {
-    Serial.print("Configuring new node: ");
-    Serial.println(nodeName);
-
-    // Optionally notify via MQTT
-    MqttMessage mqttMessage;
-    mqttMessage.topic = "ELEC520/newNode";
-    mqttMessage.payload = String("Node Configured: ") + nodeName;
-    if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
-        Serial.println("Failed to send node configuration notification to MQTT queue.");
-    }
-}
-
-
 // RS485 serial port task
 void RX_Message_Process(void *pvParameters) {
   unsigned char receivedMessage[MESSAGE_LENGTH];
@@ -336,24 +323,17 @@ void RX_Message_Process(void *pvParameters) {
       Serial.print("Sent from node of type: ");
       Serial.println(Sender_Node_Type);
 
-      if (RX_Message_Payload[0] == 'I' &&
-          RX_Message_Payload[1] == 'n' &&
-          RX_Message_Payload[2] == 't' &&
-          RX_Message_Payload[3] == 'r' &&
-          RX_Message_Payload[4] == 'o') {
+      if (strncmp((const char*)RX_Message_Payload, "Intro", 5) == 0) {
             Serial.println("New node detected. Configuring...");
                 // Format payload for the new node
             MqttMessage mqttMessage;
-            char newNodePayload[32]; // Adjust size as needed
-            snprintf(newNodePayload, sizeof(newNodePayload), "%s:%02X", Sender_Node_Type, (const char*)RX_Message_Payload[5]);
-            mqttMessage.topic = "ELEC520/newNode";
+            snprintf(newNodePayload, sizeof(newNodePayload), "Intro:%02X", Sender_Node_Type);
+            mqttMessage.topic = "ELEC520/devices/view";
+            mqttMessage.payload = newNodePayload;
             // Send the MQTT message to the queue
             if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
                 Serial.println("Failed to send message to MQTT queue");
             }
-
-
-            Configure_New_Node(Sender_Node_Type,(const char*)RX_Message_Payload[5] );
       }
       else if((Addressee == MQTT_Address) && (I_am_Forwarder)) {
         // Create an MQTT message structure

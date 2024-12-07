@@ -265,22 +265,61 @@ mqttClient.on('message', async (topic, message) => {
     } 
     
     if (topic === 'ELEC520/devices/view') {
-      const deviceType = message.toString().trim(); // Extract the device type from the payload
-      console.log(`Received device type: ${deviceType}`);
+      const payload = message.toString().trim(); // Extract and trim the payload
+      console.log(`Received payload: ${payload}`);
 
-      try {
-        const newDeviceID = await getDeviceID(deviceType);
-        // Publish the new device ID to the 'ELEC520/devices/update' topic
-        mqttClient.publish('ELEC520/devices/update',newDeviceID, (err) => {
-          if (err) {
-            console.error(`Failed to publish to topic ${topic}:`, err);
-          } else {
-            console.log(`Successfully published to topic ${topic} with QoS 1: "${newDeviceID}"`);
+      // Check if the payload starts with 'Intro:'
+      if (payload.startsWith('Intro:')) {
+          try {
+              // Determine the type of node based on the last byte of the payload
+              const lastByte = parseInt(payload.slice(-2), 16); // Convert last 2 characters to a number
+              let deviceType = '';
+
+              if (lastByte === 0x32) {
+                  deviceType = 'Fire';
+              } else if (lastByte === 0x42) {
+                  deviceType = 'Intrusion';
+              } else {
+                  console.error('Unrecognized device type in payload.');
+                  return;
+              }
+
+              // Generate a new device ID and random address
+              const { newDeviceID, randomAddress } = await getDeviceID(deviceType);
+              
+              const updateMessage = `${newDeviceID}:${randomAddress}`;             
+
+              mqttClient.publish('ELEC520/devices/update', updateMessage, (err) => {
+                  if (err) {
+                      console.error(`Failed to publish to topic ${topic}:`, err);
+                  } else {
+                      console.log(`Published new device update: ${updateMessage}`);
+                  }
+              });
+          } catch (error) {
+              console.error('Error processing Intro message:', error);
           }
-        });
-      } catch (error) {
-        console.error('Error processing ELEC520/devices/view message:', error);
-      }
+      } else {
+          try {
+            // Generate a new device ID and random address
+            const { newDeviceID, randomAddress } = await getDeviceID(deviceType);
+
+
+            // Publish the new device ID and address
+            const updateMessage = `${newDeviceID}:${randomAddress}`;
+    
+            // Publish the new device ID to the 'ELEC520/devices/update' topic
+            mqttClient.publish('ELEC520/devices/update',updateMessage, (err) => {
+              if (err) {
+                console.error(`Failed to publish to topic ${topic}:`, err);
+              } else {
+                console.log(`Successfully published to topic ${topic} with QoS 1: "${updateMessage}"`);
+              }
+            });
+          } catch (error) {
+            console.error('Error processing ELEC520/devices/view message:', error);
+          }
+        }
     }
     if (topic === 'ELEC520/userAccess') {
       const payload = message.toString().trim();
