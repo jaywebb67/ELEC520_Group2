@@ -265,22 +265,61 @@ mqttClient.on('message', async (topic, message) => {
     } 
     
     if (topic === 'ELEC520/devices/view') {
-      const deviceType = message.toString().trim(); // Extract the device type from the payload
-      console.log(`Received device type: ${deviceType}`);
+      const payload = message.toString().trim(); // Extract and trim the payload
+      console.log(`Received payload: ${payload}`);
 
-      try {
-        const newDeviceID = await getDeviceID(deviceType);
-        // Publish the new device ID to the 'ELEC520/devices/update' topic
-        mqttClient.publish('ELEC520/devices/update',newDeviceID, (err) => {
-          if (err) {
-            console.error(`Failed to publish to topic ${topic}:`, err);
-          } else {
-            console.log(`Successfully published to topic ${topic} with QoS 1: "${newDeviceID}"`);
+      // Check if the payload starts with 'Intro:'
+      if (payload.startsWith('Intro:')) {
+          try {
+              // Determine the type of node based on the last byte of the payload
+              const lastByte = parseInt(payload.slice(-2), 16); // Convert last 2 characters to a number
+              let deviceType = '';
+
+              if (lastByte === 0x32) {
+                  deviceType = 'Fire';
+              } else if (lastByte === 0x42) {
+                  deviceType = 'Intrusion';
+              } else {
+                  console.error('Unrecognized device type in payload.');
+                  return;
+              }
+
+              // Generate a new device ID and random address
+              const { newDeviceID, randomAddress } = await getDeviceID(deviceType);
+              
+              const updateMessage = `${newDeviceID}:${randomAddress}`;             
+
+              mqttClient.publish('ELEC520/devices/update', updateMessage, (err) => {
+                  if (err) {
+                      console.error(`Failed to publish to topic ${topic}:`, err);
+                  } else {
+                      console.log(`Published new device update: ${updateMessage}`);
+                  }
+              });
+          } catch (error) {
+              console.error('Error processing Intro message:', error);
           }
-        });
-      } catch (error) {
-        console.error('Error processing ELEC520/devices/view message:', error);
-      }
+      } else {
+          try {
+            // Generate a new device ID and random address
+            const { newDeviceID, randomAddress } = await getDeviceID(deviceType);
+
+
+            // Publish the new device ID and address
+            const updateMessage = `${newDeviceID}:${randomAddress}`;
+    
+            // Publish the new device ID to the 'ELEC520/devices/update' topic
+            mqttClient.publish('ELEC520/devices/update',updateMessage, (err) => {
+              if (err) {
+                console.error(`Failed to publish to topic ${topic}:`, err);
+              } else {
+                console.log(`Successfully published to topic ${topic} with QoS 1: "${updateMessage}"`);
+              }
+            });
+          } catch (error) {
+            console.error('Error processing ELEC520/devices/view message:', error);
+          }
+        }
     }
     if (topic === 'ELEC520/userAccess') {
       const payload = message.toString().trim();
@@ -358,29 +397,77 @@ mqttClient.on('message', async (topic, message) => {
         
     if (topic === 'ELEC520/devicePing') {
       const payload = message.toString().trim();
-  
-      // Split the message into username and gateID
-      const [deviceID, currentStatus] = payload.split(' ');
-  
-      if (!deviceID || !currentStatus) {
+    
+      let deviceID, currentStatus;
+    
+      // Check if payload starts with "Fire" or "Intrusion"
+      if (payload.startsWith('Fire') || payload.startsWith('Intrusion')) {
+        // Split the message into deviceType, deviceStatus, and deviceAddress
+        const [deviceType, deviceStatus, deviceAddress] = payload.split(' ');
+    
+        if (!deviceType || !deviceStatus || !deviceAddress) {
+          console.error('Invalid message format. Expected "deviceType status address".');
+          return;
+        }
+        console.log(`${deviceAddress}${deviceType}${deviceStatus}`);
+        currentStatus = deviceStatus; // The device status is directly extracted
+    
+        try {
+          // Reference the devices table to find the deviceID by its address
+          const devicesRef = admin.database().ref('devices');
+          const devicesSnapshot = await devicesRef.once('value');
+          const devices = devicesSnapshot.val() || {};
+        
+          // Normalize the address for comparison (convert to lowercase)
+          const normalizedAddress = deviceAddress.toLowerCase();
+        
+          // Search for the deviceID using the deviceAddress
+          deviceID = null; // Reset deviceID before searching
+          Object.keys(devices).forEach(deviceTypeKey => {
+            const deviceList = devices[deviceTypeKey]; // Get the list of devices for this type
+            if (Array.isArray(deviceList)) {
+              deviceList.forEach(device => {
+                if (device.address && device.address.toLowerCase() === normalizedAddress) {
+                  deviceID = device.deviceID;
+                }
+              });
+            }
+          });
+        
+          if (!deviceID) {
+            console.warn(`Device with address ${deviceAddress} not found in devices table. Ignoring ping.`);
+            return;
+          }
+        } catch (error) {
+          console.error('Error finding device by address:', error);
+          return;
+        }
+        
+      } else {
+        // Default behavior for other payloads
+        const [parsedDeviceID, parsedStatus] = payload.split(' ');
+    
+        if (!parsedDeviceID || !parsedStatus) {
           console.error('Invalid message format. Expected "deviceID status".');
           return;
+        }
+    
+        deviceID = parsedDeviceID;
+        currentStatus = parsedStatus;
       }
-
-          // If currentLeader is null and a device comes online, elect a leader
+    
+      // If currentLeader is null and a device comes online, elect a leader
       if (!currentLeader && currentStatus === 'online') {
         console.log(`Device ${deviceID} is online and no leader exists. Electing a leader...`);
         await electLeader();
       }
-
+    
       // If the current leader goes offline, elect a new leader
       if (currentLeader && currentLeader.deviceID === deviceID && currentStatus === 'offline') {
         console.log(`Leader ${deviceID} went offline. Electing a new leader...`);
         await electLeader();
       }
-  
-      //console.log(`Received access attempt: device ID=${deviceID}, Status=${currentStatus}`);
-  
+    
       try {
         // Get the current date and time
         const now = new Date();
@@ -391,36 +478,19 @@ mqttClient.on('message', async (topic, message) => {
         const snapshot = await deviceStatusRef.once('value');
         const deviceStatusData = snapshot.val() || {}; // Default to an empty object if no data exists
     
-        // Reference the devices table to check if the deviceID exists
-        const devicesRef = admin.database().ref('devices');
-        const devicesSnapshot = await devicesRef.once('value');
-        const devices = devicesSnapshot.val() || {};
-    
-        // Check if the deviceID exists in the devices table
-        const deviceExists = Object.keys(devices).some(deviceType => {
-          const deviceList = devices[deviceType]; // Get the array of devices for this type
-          return Array.isArray(deviceList) && deviceList.some(device => device.deviceID === deviceID);
-        });
-
-    
-        if (!deviceExists) {
-            console.warn(`Device ID ${deviceID} not found in devices table. Ignoring ping.`);
-            return; // Exit the function
-        }
-    
         // Update or create the deviceStatus entry
         if (deviceStatusData[deviceID]) {
-            // Update existing entry
-            deviceStatusData[deviceID].deviceID = deviceID;
-            deviceStatusData[deviceID].lastPing = timeaccess;
-            deviceStatusData[deviceID].status = currentStatus;
+          // Update existing entry
+          deviceStatusData[deviceID].deviceID = deviceID;
+          deviceStatusData[deviceID].lastPing = timeaccess;
+          deviceStatusData[deviceID].status = currentStatus;
         } else {
-            // Create a new entry
-            deviceStatusData[deviceID] = {
-                deviceID: deviceID,
-                lastPing: timeaccess,
-                status: currentStatus,
-            };
+          // Create a new entry
+          deviceStatusData[deviceID] = {
+            deviceID: deviceID,
+            lastPing: timeaccess,
+            status: currentStatus,
+          };
         }
     
         // Write the updated object back to the database
@@ -429,9 +499,10 @@ mqttClient.on('message', async (topic, message) => {
         // Notify about the update
         notifyDeviceStatusUpdate();
       } catch (error) {
-        console.error('Error processing ELEC520/deviceStatus:', error);
+        console.error('Error processing ELEC520/devicePing:', error);
       }
-    }  
+    }
+     
     
     
     if (topic === "ELEC520/users/admin/needUpdate" || topic === "ELEC520/users/needUpdate") {

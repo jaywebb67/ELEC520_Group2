@@ -14,6 +14,8 @@ uint8_t Home_Node_Type = 0x32;
 uint8_t Home_Address = 0x28;    //Default address for initial set up
 uint8_t Destination_Address = 0x0A;   //Default address for initial set up
 uint8_t Node_3 = 0x33;
+
+
 const char Respond_Cmd[8] = "RESPOND";
 const char Reset_Cmd[6] = "RESET";
 volatile bool alarm_Pressed = false;
@@ -26,7 +28,7 @@ uint32_t count = 0;
 const struct TX_Payload Fire_1 = {9, "Fire Call"};
 const struct TX_Payload Fire_2 = {12, "Sensor error"};
 const struct TX_Payload Fire_3 = {10, "Heat Alarm"};
-const struct TX_Payload Alive = {8, "Fire1 online"};
+const struct TX_Payload Alive = {11, "Fire online"};
 struct TX_Payload Hello = {2, "Hi"};
 
 DHT dht(DHTPIN, DHTTYPE);
@@ -58,19 +60,36 @@ void Test_Heat_Sensor() {
     Transmit_To_Bus(&Fire_3);
     digitalWrite(RedPin, HIGH);
   } 
-  else if(count == 10) {
+  else if (count == 10) {
       struct TX_Payload Fire_temp;
-      Fire_temp.length = snprintf(Fire_temp.message, sizeof(Fire_temp.message), "{\"temperature\":\"%.2f\"}", t);
-      if (Fire_temp.length >= sizeof(Fire_temp.message)) {
-          // Ensure null termination if snprintf truncates the message
-          Fire_temp.message[sizeof(Fire_temp.message)] = '\0';
+
+      // Safely format the temperature as a string with two decimal places
+      int written = snprintf(Fire_temp.message, sizeof(Fire_temp.message), "%.2f", t);
+
+      // Check if snprintf successfully formatted the message
+      if (written < 0) {
+          // Error occurred during formatting
+          Fire_temp.length = 0;
+          memset(Fire_temp.message, 0, sizeof(Fire_temp.message));
+      } else if (written >= sizeof(Fire_temp.message)) {
+          // Message was truncated; ensure null termination
+          Fire_temp.message[sizeof(Fire_temp.message) - 1] = '\0';
           Fire_temp.length = sizeof(Fire_temp.message) - 1;
+      } else {
+          // Message fits; set length to the number of characters written
+          Fire_temp.length = (unsigned char)written;
       }
+      // Save the current destination address and set a new one
       uint8_t temp = Destination_Address;
       Destination_Address = MQTT_Address;
+
+      // Transmit the payload
       Transmit_To_Bus(&Fire_temp);
+
+      // Restore the original destination address
       Destination_Address = temp;
-      count = 0;
+
+      count = 0; // Reset the count
   }
 
 }
@@ -100,12 +119,6 @@ void loop() {
         alarm_Pressed = false;
         digitalWrite(RedPin, LOW);
       }
-      else if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
-        uint8_t temp = Destination_Address;
-        Destination_Address = MQTT_Address;
-        Transmit_To_Bus(&Alive);
-        Destination_Address = temp;
-      }
       else if (strcmp((char*)RX_Message_Payload, "New ADD") == 0){
         Home_Address = RX_Message_Payload[7];
         ReW_Mem = true;
@@ -116,7 +129,14 @@ void loop() {
         Reset_Params(ReW_Mem);
       }
     }
-    
+    if(Addressee == Home_Node_Type){
+      if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
+        uint8_t temp = Destination_Address;
+        Destination_Address = MQTT_Address;
+        Transmit_To_Bus(&Alive);
+        Destination_Address = temp;
+      }
+    }
     else{
       Serial.print("Address mismatch: Received ");
       Serial.print(Addressee, HEX);

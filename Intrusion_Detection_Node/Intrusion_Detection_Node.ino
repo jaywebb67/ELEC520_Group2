@@ -19,7 +19,7 @@ const char No_User_Cmd[7] = "NVuser";
 
 
 const struct TX_Payload Intrusion = {14, "Intruder alarm"};
-const struct TX_Payload Alive = {8, "I'm here"};
+const struct TX_Payload Alive = {8, "Intrusion online"};
 
 // Ultrasonic Setup
 bool ultraSonicAlert = false;
@@ -90,6 +90,14 @@ void loop() {
         else if (strcmp((char*)RX_Message_Payload, "Remove") == 0){
           ReW_Mem = false;
           Reset_Params(ReW_Mem);
+        }
+      }
+      if(Addressee == Home_Node_Type){
+        if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
+          uint8_t temp = Destination_Address;
+          Destination_Address = MQTT_Address;
+          Transmit_To_Bus(&Alive);
+          Destination_Address = temp;
         }
       }
         // Handle specific commands

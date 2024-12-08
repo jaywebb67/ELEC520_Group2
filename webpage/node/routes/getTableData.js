@@ -28,33 +28,43 @@ const getAllUsers = async () => {
 };
 
 const getDeviceID = async (deviceType) => {
-    try{
-        // Fetch devices of the specified type from Firebase
-        const snapshot = await admin.database().ref(`devices/${deviceType}`).once('value');
-        
-        // Check if the device type exists
-        const devices = snapshot.val() || [];
-        const deviceCount = devices.length;
+  try {
+      // Fetch devices of the specified type from Firebase
+      const snapshot = await admin.database().ref(`devices/${deviceType}`).once('value');
+      const devices = snapshot.val() || [];
 
-        // Create the new device ID
-        const newDeviceID = `${deviceType}${deviceCount + 1}`;
-        
-        // Create the new device entry
-        const newDevice = {
-            deviceID: newDeviceID,
-            device_type: deviceType,
-        };
+      // Create a unique new device ID
+      const deviceCount = devices.length;
+      const newDeviceID = `${deviceType}${deviceCount + 1}`;
 
-        // Add the new device to the database using numerical index
-        await admin.database().ref(`devices/${deviceType}/${deviceCount}`).set(newDevice);
+      // Generate a random 1-byte address not already in use
+      let randomAddress;
+      const existingAddresses = new Set(
+          Object.values(devices).map(device => device.address)
+      );
 
-        console.log(`Added new device to database: ${JSON.stringify(newDevice)}`);
-        return newDeviceID;
-    } catch (error) {
-        console.error('Error fetching devices from Firebase:', error);
-        throw error; // Propagate the error for the caller to handle
-    }
-}
+      do {
+        randomAddress = Buffer.from([Math.floor(Math.random() * 256)]); // Generate a single-byte buffer
+      } while (existingAddresses.has(randomAddress[0]) || [0x32, 0x42, 0x13, 0x23, 0x0A].includes(randomAddress[0]));
+      randomAddress = randomAddress.toString('hex');
+      // Create the new device entry
+      const newDevice = {
+        deviceID: newDeviceID,
+        device_type: deviceType,
+        address: randomAddress, // Save as a hexadecimal string
+      };   
+
+      // Add the new device to the database
+      await admin.database().ref(`devices/${deviceType}/${deviceCount}`).set(newDevice);
+
+      console.log(`Added new device to database: ${JSON.stringify(newDevice)}`);
+      return { newDeviceID, randomAddress };
+  } catch (error) {
+      console.error('Error fetching devices from Firebase:', error);
+      throw error;
+  }
+};
+
 
 // Endpoint to get table data
 router.get('/get-table-data', async (req, res) => {

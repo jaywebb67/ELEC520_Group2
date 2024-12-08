@@ -23,8 +23,8 @@ const char* mqttServer = "40c06ef97ec5427eb54aa49e5c03c12c.s1.eu.hivemq.cloud";
 const uint16_t mqttPort = 8883;
 
 // WiFi credentials
-const char* ssid = "Jays_WiFi";//"BT-CJC2PH";//
-const char* password = "jaywebb1";//"NfECRbGtfV37Hd";//
+const char* ssid = "BT-CJC2PH";//"Jays_WiFi";//
+const char* password = "NfECRbGtfV37Hd";//"jaywebb1";//
 
 //topic for recieving user credential updates
 String usersTopic = "";
@@ -133,7 +133,13 @@ void MQTT_task(void* pvParameters) {
     reconnect(1); // Initial connection attempt
     unsigned long lastPingTime = millis();
     unsigned long lastConnectionAttempt = millis();
-
+    unsigned long lastIntrusionPing = millis();
+    unsigned long lastFirePing = millis();
+    unsigned long lastTemperaturePing = millis();
+    struct TX_Payload pingPayload = {8,"RESPOND"};
+    struct TX_Payload tempPayload = {5,"23.53"};
+    // struct TX_Payload testPing = {14, "Fire online ec"};
+    unsigned char assembledMessage[40]; // Adjust size as needed
     while (true) {
         if (restartFlag) {
             esp_restart(); // Restart the ESP if the restart flag is set
@@ -154,11 +160,45 @@ void MQTT_task(void* pvParameters) {
             }
         } else {
             // Retry reconnection every 5 minutes
-            if (millis() - lastConnectionAttempt >= 300000) { // 5 minutes
+            if (millis() - lastConnectionAttempt >= 30000) { // 5 minutes
                 lastConnectionAttempt = millis();
                 reconnect(1); // Attempt to reconnect
             }
+        } if (millis()-lastFirePing >=10000){
+          lastFirePing = millis();
+          uint8_t temp = Destination_Address;
+            // Destination_Address = MQTT_Address;
+            
+            // Assemble_Message(&testPing, assembledMessage);
+            // Destination_Address = temp;
+            // if (xQueueSend(RX_Queue, &assembledMessage, portMAX_DELAY) != pdTRUE) {
+            //   Serial.println("Failed to send message to queue");
+            // }
+          // uint8_t temp = Destination_Address;
+          Destination_Address = Fire_Node;
+          Transmit_To_Bus(&pingPayload);
+          Destination_Address = temp;
         }
+        if (millis()-lastIntrusionPing >=10000){
+          lastIntrusionPing = millis();
+          uint8_t temp = Destination_Address;
+          Destination_Address = Intrusion_Node;
+          Transmit_To_Bus(&pingPayload);
+          Destination_Address = temp;
+        }
+        // if (millis()-lastTemperaturePing >=5000){
+        //   lastTemperaturePing = millis();
+        //   uint8_t temp = Destination_Address;
+        //   Destination_Address = MQTT_Address;
+        //   Assemble_Message(&tempPayload, assembledMessage);
+        //   Destination_Address = temp;
+        //   if (xQueueSend(RX_Queue, &assembledMessage, portMAX_DELAY) != pdTRUE) {
+        //     Serial.println("Failed to send message to queue");
+        //   }
+        //   Transmit_To_Bus(&tempPayload);
+        //   Destination_Address = temp;
+        // }
+
     }
 }
 
@@ -166,34 +206,32 @@ void MQTT_task(void* pvParameters) {
 void mqttPublisher(void* parameter) {
   MqttMessage message; // Create a struct instance to hold topic and payload
   struct TX_Payload txPayload;
+  char combinedPayload[35]; // Buffer to hold the formatted JSON string
   while (true) {
     // Wait for an MqttMessage from the queue
     if (xQueueReceive(mqttPublishQueue, &message, portMAX_DELAY) == pdPASS) {
-      // Publish the payload to the specified MQTT topic
-        String combinedPayload;
-        if (message.topic == "ELEC520/userAccess") {
-          combinedPayload = message.payload + " " + clientId; // Add clientId to the payload
+        // Publish the payload to the specified MQTT topic
+        if (message.topic == "ELEC520/temperature") {
+          snprintf(combinedPayload, sizeof(combinedPayload), "{\"temperature\":\"%s\"}", message.payload.c_str());
         } else {
-          combinedPayload = message.payload; // Use the original payload
+          snprintf(combinedPayload, sizeof(combinedPayload), "%s", message.payload.c_str());
         }
-      if(mqttClient.connected()){
-        mqttClient.publish(message.topic.c_str(), message.payload.c_str());
-        // Log the published message
-        Serial.print("Published to topic: ");
-        Serial.print("ELEC520/userAccess");
-        Serial.print(" | Payload: ");
-        Serial.println(message.payload.c_str());
-      }
-      else{
-        txPayload.length = min(combinedPayload.length(), sizeof(txPayload.message) - 1); // Set length
-        strncpy(txPayload.message, combinedPayload.c_str(), txPayload.length);          // Copy payload
-        txPayload.message[txPayload.length] = '\0'; // Ensure null-termination
-        uint8_t temp = Destination_Address;
-        Destination_Address = MQTT_Address;
-        Transmit_To_Bus(&txPayload);
-        Destination_Address = temp;
+        if(mqttClient.connected()){
+          mqttClient.publish(message.topic.c_str(), combinedPayload);
+        }
+        else{
+          // Set up the TX_Payload struct to send via bus
+          txPayload.length = min(strlen(combinedPayload), sizeof(txPayload.message) - 1); // Set length safely
+          strncpy(txPayload.message, combinedPayload, txPayload.length);  // Copy payload into message buffer
+          txPayload.message[txPayload.length] = '\0';  // Ensure null-termination
 
-      }
+          // Transmit payload to the bus
+          uint8_t temp = Destination_Address;
+          Destination_Address = MQTT_Address;
+          Transmit_To_Bus(&txPayload);
+          Destination_Address = temp;
+
+        }
     }
   }
 }
@@ -309,14 +347,12 @@ void reconnect(bool onSetUp) {
         String willMessage = clientId + " offline";
         if (mqttClient.connect(clientId.c_str(), "alarmID", "Alarmpass1", "ELEC520/devicePing", 0, true, willMessage.c_str())) {
             Serial.println("MQTT connected");
-
+            if (mqttClient.subscribe("ELEC520/devices/update", 0)) {
+                Serial.println("Subscribed to ELEC520/devices/update with QoS 0");
+            } else {
+                Serial.println("Failed to subscribe to ELEC520/devices/update");
+            }
             if (deviceConfig) {
-                
-                if (mqttClient.subscribe("ELEC520/devices/update", 0)) {
-                    Serial.println("Subscribed to ELEC520/devices/update with QoS 0");
-                } else {
-                    Serial.println("Failed to subscribe to ELEC520/devices/update");
-                }
                 mqttClient.publish("ELEC520/devices/view", "Alarm");
             }
             if (onSetUp) {
@@ -327,9 +363,11 @@ void reconnect(bool onSetUp) {
                 }
                 mqttClient.publish("ELEC520/users/admin/needUpdate", clientId.c_str());
             }
+            mqttClient.subscribe("ELEC520/test", 0);
             mqttClient.subscribe("ELEC520/alarm", 0);
             mqttClient.subscribe("ELEC520/deviceConfig", 0);
             mqttClient.subscribe("ELEC520/users/admin/add",0);
+            mqttClient.subscribe("ELEC520/users/admin/view",0);
             mqttClient.subscribe("ELEC520/forwarder",0);
         } else {
             Serial.print("MQTT connection failed, rc=");
@@ -366,7 +404,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     MqttMessage msg = {String(topic), String(payloadBuffer)};
     //Serial.println(msg.payload);
     if (xQueueSend(mqttMessageQueue, &msg, portMAX_DELAY) != pdTRUE) {
-      //  Serial.println("Failed to send message to queue");
+        Serial.println("Failed to send message to queue");
     }
 }
 
@@ -375,27 +413,87 @@ void mqttHandler(void* pvParameters) {
 
     while (true) {
         if (xQueueReceive(mqttMessageQueue, &receivedMsg, QUEUE_WAIT_TIME) == pdTRUE) {
-
           if (receivedMsg.topic == "ELEC520/devices/update") {
               Serial.println(receivedMsg.payload);
-              // Open the credentials file in append mode
-              File file = LittleFS.open("/deviceConfig.txt", "w");
-              if (file) {
-                  // Write the payload in 'user:password' format to the file
-                  file.print(receivedMsg.payload); // Each entry goes on a new line
-                  file.print(":Unknown");
-                  file.flush();  // Ensure data is written immediately
-                  file.close();
-                  Serial.println("Device ID written to file: " + receivedMsg.payload);
-                  clientId = receivedMsg.payload;
-                  ping = clientId + " online"; 
-                  usersTopic = "ELEC520/users/admin/update/" + clientId;
-                  
-              } else {
-                  Serial.println("Failed to open and write 'deviceID.txt'.");
+              if (receivedMsg.payload.startsWith("Fire")) {
+                  receivedMsg.payload.trim();
+                  // int separatorIndex = receivedMsg.payload.indexOf(':'); // Find the index of the colon separator
+                  // if (separatorIndex != -1) {
+                  //   String fireNodeStr = receivedMsg.payload.substring(separatorIndex + 1); // Extract substring after colon
+                    
+                  //   // Convert hexadecimal string to a uint8_t
+                  //   uint8_t Fire_Node = (uint8_t) strtol(fireNodeStr.c_str(), NULL, 16); // Parse as base-16 (hex)
+
+                  //   Serial.print("Extracted address (hex): 0x");
+                  //   Serial.println(Fire_Node, HEX); // Print as hex
+                  // } else {
+                  //   Serial.println("Invalid format. Expected 'clientID:address'.");
+                  // }
+                  if(I_am_Forwarder){
+                    uint8_t temp = Destination_Address;
+                    Destination_Address = 0x32;
+                    struct TX_Payload payload;
+                    payload.length = std::min((size_t)255, receivedMsg.payload.length()); // Ensure message length doesn't exceed buffer size
+                    strncpy(payload.message, receivedMsg.payload.c_str(), payload.length);
+                    payload.message[payload.length] = '\0'; // Null-terminate the string
+                    Transmit_To_Bus(&payload);
+                    Destination_Address = temp;
+                  }
               }
-    
-              restartFlag = 1;
+              else if (receivedMsg.payload.startsWith("Intrusion")) {
+                  receivedMsg.payload.trim();
+                  // int separatorIndex = receivedMsg.payload.indexOf(':'); // Find the index of the colon separator
+                  // if (separatorIndex != -1) {
+                  //   String IntrusionNodeStr = receivedMsg.payload.substring(separatorIndex + 1); // Extract substring after colon
+                    
+                  //   // Convert hexadecimal string to a uint8_t
+                  //   uint8_t Intrusion_Node = (uint8_t) strtol(IntrusionNodeStr.c_str(), NULL, 16); // Parse as base-16 (hex)
+
+                  //   Serial.print("Extracted address (hex): 0x");
+                  //   Serial.println(Intrusion_Node, HEX); // Print as hex
+                  // } else {
+                  //   Serial.println("Invalid format. Expected 'clientID:address'.");
+                  // }
+                  if(I_am_Forwarder){
+                    uint8_t temp = Destination_Address;
+                    Destination_Address = 0x42;
+                    struct TX_Payload payload;
+                    payload.length = std::min((size_t)255, receivedMsg.payload.length()); // Ensure message length doesn't exceed buffer size
+                    strncpy(payload.message, receivedMsg.payload.c_str(), payload.length);
+                    payload.message[payload.length] = '\0'; // Null-terminate the string
+                    Transmit_To_Bus(&payload);
+                    Destination_Address = temp;
+                  }
+              }
+              // Open the credentials file in append mode
+              else{
+                File file = LittleFS.open("/deviceConfig.txt", "w");
+                if (file) {
+                    // Write the payload in 'user:password' format to the file
+                    file.print(receivedMsg.payload); // Each entry goes on a new line
+                    file.print(":Unknown");
+                    file.flush();  // Ensure data is written immediately
+                    file.close();
+                    Serial.println("Device ID written to file: " + receivedMsg.payload);
+                    clientId = receivedMsg.payload;
+                    ping = clientId + " online"; 
+                    usersTopic = "ELEC520/users/admin/update/" + clientId;
+                    
+                } else {
+                    Serial.println("Failed to open and write 'deviceID.txt'.");
+                }
+      
+                restartFlag = 1;
+              }
+          }
+          else if (receivedMsg.topic == "ELEC520/test"){
+            struct TX_Payload testConfig = {7, "Intro:32"};
+            unsigned char assembledMessage[40]; // Adjust size as needed
+            Assemble_Message(&testConfig, assembledMessage);
+
+            if (xQueueSend(RX_Queue, &assembledMessage, portMAX_DELAY) != pdTRUE) {
+              Serial.println("Failed to send message to queue");
+            }
           }
           else if (receivedMsg.topic == "ELEC520/forwarder") {
             Serial.println(receivedMsg.payload);
