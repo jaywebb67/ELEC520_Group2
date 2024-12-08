@@ -45,7 +45,7 @@ const getDeviceID = async (deviceType) => {
 
       do {
         randomAddress = Buffer.from([Math.floor(Math.random() * 256)]); // Generate a single-byte buffer
-      } while (existingAddresses.has(randomAddress[0]) || [0x32, 0x42].includes(randomAddress[0]));
+      } while (existingAddresses.has(randomAddress[0]) || [0x32, 0x42, 0x13, 0x23, 0x0A].includes(randomAddress[0]));
       randomAddress = randomAddress.toString('hex');
       // Create the new device entry
       const newDevice = {

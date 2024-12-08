@@ -60,19 +60,36 @@ void Test_Heat_Sensor() {
     Transmit_To_Bus(&Fire_3);
     digitalWrite(RedPin, HIGH);
   } 
-  else if(count == 10) {
+  else if (count == 10) {
       struct TX_Payload Fire_temp;
-      Fire_temp.length = snprintf(Fire_temp.message, sizeof(Fire_temp.message), "{\"temperature\":\"%.2f\"}", t);
-      if (Fire_temp.length >= sizeof(Fire_temp.message)) {
-          // Ensure null termination if snprintf truncates the message
-          Fire_temp.message[sizeof(Fire_temp.message)] = '\0';
+
+      // Safely format the temperature as a string with two decimal places
+      int written = snprintf(Fire_temp.message, sizeof(Fire_temp.message), "%.2f", t);
+
+      // Check if snprintf successfully formatted the message
+      if (written < 0) {
+          // Error occurred during formatting
+          Fire_temp.length = 0;
+          memset(Fire_temp.message, 0, sizeof(Fire_temp.message));
+      } else if (written >= sizeof(Fire_temp.message)) {
+          // Message was truncated; ensure null termination
+          Fire_temp.message[sizeof(Fire_temp.message) - 1] = '\0';
           Fire_temp.length = sizeof(Fire_temp.message) - 1;
+      } else {
+          // Message fits; set length to the number of characters written
+          Fire_temp.length = (unsigned char)written;
       }
+      // Save the current destination address and set a new one
       uint8_t temp = Destination_Address;
       Destination_Address = MQTT_Address;
+
+      // Transmit the payload
       Transmit_To_Bus(&Fire_temp);
+
+      // Restore the original destination address
       Destination_Address = temp;
-      count = 0;
+
+      count = 0; // Reset the count
   }
 
 }

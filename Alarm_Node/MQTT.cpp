@@ -135,7 +135,11 @@ void MQTT_task(void* pvParameters) {
     unsigned long lastConnectionAttempt = millis();
     unsigned long lastIntrusionPing = millis();
     unsigned long lastFirePing = millis();
+    unsigned long lastTemperaturePing = millis();
     struct TX_Payload pingPayload = {8,"RESPOND"};
+    struct TX_Payload tempPayload = {5,"23.53"};
+    // struct TX_Payload testPing = {14, "Fire online ec"};
+    unsigned char assembledMessage[40]; // Adjust size as needed
     while (true) {
         if (restartFlag) {
             esp_restart(); // Restart the ESP if the restart flag is set
@@ -156,14 +160,21 @@ void MQTT_task(void* pvParameters) {
             }
         } else {
             // Retry reconnection every 5 minutes
-            if (millis() - lastConnectionAttempt >= 300000) { // 5 minutes
+            if (millis() - lastConnectionAttempt >= 30000) { // 5 minutes
                 lastConnectionAttempt = millis();
                 reconnect(1); // Attempt to reconnect
             }
-        }
-        if (millis()-lastFirePing >=10000){
+        } if (millis()-lastFirePing >=10000){
           lastFirePing = millis();
           uint8_t temp = Destination_Address;
+            // Destination_Address = MQTT_Address;
+            
+            // Assemble_Message(&testPing, assembledMessage);
+            // Destination_Address = temp;
+            // if (xQueueSend(RX_Queue, &assembledMessage, portMAX_DELAY) != pdTRUE) {
+            //   Serial.println("Failed to send message to queue");
+            // }
+          // uint8_t temp = Destination_Address;
           Destination_Address = Fire_Node;
           Transmit_To_Bus(&pingPayload);
           Destination_Address = temp;
@@ -175,6 +186,18 @@ void MQTT_task(void* pvParameters) {
           Transmit_To_Bus(&pingPayload);
           Destination_Address = temp;
         }
+        // if (millis()-lastTemperaturePing >=5000){
+        //   lastTemperaturePing = millis();
+        //   uint8_t temp = Destination_Address;
+        //   Destination_Address = MQTT_Address;
+        //   Assemble_Message(&tempPayload, assembledMessage);
+        //   Destination_Address = temp;
+        //   if (xQueueSend(RX_Queue, &assembledMessage, portMAX_DELAY) != pdTRUE) {
+        //     Serial.println("Failed to send message to queue");
+        //   }
+        //   Transmit_To_Bus(&tempPayload);
+        //   Destination_Address = temp;
+        // }
 
     }
 }
@@ -183,34 +206,32 @@ void MQTT_task(void* pvParameters) {
 void mqttPublisher(void* parameter) {
   MqttMessage message; // Create a struct instance to hold topic and payload
   struct TX_Payload txPayload;
+  char combinedPayload[35]; // Buffer to hold the formatted JSON string
   while (true) {
     // Wait for an MqttMessage from the queue
     if (xQueueReceive(mqttPublishQueue, &message, portMAX_DELAY) == pdPASS) {
-      // Publish the payload to the specified MQTT topic
-        String combinedPayload;
-        if (message.topic == "ELEC520/userAccess") {
-          combinedPayload = message.payload + " " + clientId; // Add clientId to the payload
+        // Publish the payload to the specified MQTT topic
+        if (message.topic == "ELEC520/temperature") {
+          snprintf(combinedPayload, sizeof(combinedPayload), "{\"temperature\":\"%s\"}", message.payload.c_str());
         } else {
-          combinedPayload = message.payload; // Use the original payload
+          snprintf(combinedPayload, sizeof(combinedPayload), "%s", message.payload.c_str());
         }
-      if(mqttClient.connected()){
-        mqttClient.publish(message.topic.c_str(), message.payload.c_str());
-        // Log the published message
-        Serial.print("Published to topic: ");
-        Serial.print("ELEC520/userAccess");
-        Serial.print(" | Payload: ");
-        Serial.println(message.payload.c_str());
-      }
-      else{
-        txPayload.length = min(combinedPayload.length(), sizeof(txPayload.message) - 1); // Set length
-        strncpy(txPayload.message, combinedPayload.c_str(), txPayload.length);          // Copy payload
-        txPayload.message[txPayload.length] = '\0'; // Ensure null-termination
-        uint8_t temp = Destination_Address;
-        Destination_Address = MQTT_Address;
-        Transmit_To_Bus(&txPayload);
-        Destination_Address = temp;
+        if(mqttClient.connected()){
+          mqttClient.publish(message.topic.c_str(), combinedPayload);
+        }
+        else{
+          // Set up the TX_Payload struct to send via bus
+          txPayload.length = min(strlen(combinedPayload), sizeof(txPayload.message) - 1); // Set length safely
+          strncpy(txPayload.message, combinedPayload, txPayload.length);  // Copy payload into message buffer
+          txPayload.message[txPayload.length] = '\0';  // Ensure null-termination
 
-      }
+          // Transmit payload to the bus
+          uint8_t temp = Destination_Address;
+          Destination_Address = MQTT_Address;
+          Transmit_To_Bus(&txPayload);
+          Destination_Address = temp;
+
+        }
     }
   }
 }

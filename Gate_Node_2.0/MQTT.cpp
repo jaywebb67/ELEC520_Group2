@@ -134,7 +134,10 @@ void MQTT_task(void* pvParameters) {
     unsigned long lastConnectionAttempt = millis();
     unsigned long lastIntrusionPing = millis();
     unsigned long lastFirePing = millis();
-    struct TX_Payload pingPayload = {8,"RESPOND"};    
+    struct TX_Payload pingPayload = {8,"RESPOND"};
+    // struct TX_Payload testPing = {14, "Fire online ec"};
+    uint8_t temp;
+    unsigned char assembledMessage[40]; // Adjust size as needed
     while (true) {
         if (restartFlag) {
             esp_restart(); // Restart the ESP if the restart flag is set
@@ -145,10 +148,12 @@ void MQTT_task(void* pvParameters) {
             // Send ping message every 10 seconds
             if (millis() - lastPingTime >= 10000) {
                 lastPingTime = millis();
+                
                 if (!mqttClient.publish("ELEC520/devicePing", ping.c_str())) {
                     // Uncomment for debugging
                     // Serial.println("Failed to send ping message");
                 }
+                
                 mqttClient.loop(); // Ensure MQTT client processes incoming messages
             }
         } else {
@@ -157,21 +162,29 @@ void MQTT_task(void* pvParameters) {
                 lastConnectionAttempt = millis();
                 reconnect(1); // Attempt to reconnect
             }
-        }
-        if (millis()-lastFirePing >=10000){
+        } if (millis()-lastFirePing >=10000){
           lastFirePing = millis();
-          uint8_t temp = Destination_Address;
+          temp = Destination_Address;
+            // Destination_Address = MQTT_Address;
+            
+            // Assemble_Message(&testPing, assembledMessage);
+            // Destination_Address = temp;
+            // if (xQueueSend(RX_Queue, &assembledMessage, portMAX_DELAY) != pdTRUE) {
+            //   Serial.println("Failed to send message to queue");
+            // }
+          // uint8_t temp = Destination_Address;
           Destination_Address = Fire_Node;
           Transmit_To_Bus(&pingPayload);
           Destination_Address = temp;
         }
         if (millis()-lastIntrusionPing >=10000){
           lastIntrusionPing = millis();
-          uint8_t temp = Destination_Address;
+          // uint8_t temp = Destination_Address;
           Destination_Address = Intrusion_Node;
           Transmit_To_Bus(&pingPayload);
           Destination_Address = temp;
         }
+
     }
 }
 
@@ -179,6 +192,7 @@ void MQTT_task(void* pvParameters) {
 void mqttPublisher(void* parameter) {
   MqttMessage message; // Create a struct instance to hold topic and payload
   struct TX_Payload txPayload;
+  char combinedPayload[35]; // Buffer to hold the formatted JSON string
   while (true) {
     // Wait for an MqttMessage from the queue
     if (xQueueReceive(mqttPublishQueue, &message, portMAX_DELAY) == pdPASS) {
@@ -203,7 +217,11 @@ void mqttPublisher(void* parameter) {
         } else{
             mqttClient.publish(message.topic.c_str(), message.payload.c_str());
           }
-        }
+      }
+      else if (message.topic == "ELEC520/temperature") {
+          snprintf(combinedPayload, sizeof(combinedPayload), "{\"temperature\":\"%s\"}", message.payload.c_str());
+          mqttClient.publish(message.topic.c_str(), combinedPayload);
+      }
       else if(!mqttClient.connected()){
           txPayload.length = min(message.payload.length(), sizeof(message.payload) - 1); // Set length
           strncpy(txPayload.message, message.payload.c_str(), txPayload.length);          // Copy payload
