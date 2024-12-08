@@ -32,6 +32,8 @@ extern SoftwareSerial RS485Serial;
 #define MESSAGE_LENGTH      40
 #define MQTT_Address        0x0A
 #define location_address    0
+#define Size_Address        1
+#define ID_Address          2
 
 //.h v2.3
 struct TX_Payload {
@@ -63,6 +65,7 @@ extern unsigned char Forward[40];
 extern unsigned char RX_Message_Payload[35];
 extern unsigned char Ack_message[9];
 extern unsigned char IntroMessage[6];
+extern unsigned char Device_ID[10];
 extern uint8_t Sender_Address;
 extern uint8_t Sender_Node_Type;
 extern uint8_t Addressee;

@@ -27,6 +27,8 @@ unsigned char TX_Message[40]; // sized for start byte,
 unsigned char RX_Message[40];
 unsigned char Forward[40];
 unsigned char RX_Message_Payload[35];
+unsigned char IntroMessage[6] = {'I', 'n', 't', 'r', 'o', Home_Address};
+unsigned char Device_ID[10];
 unsigned char Ack_message[9] = { 
   START_BYTE, 
   Home_Address, 
@@ -39,6 +41,7 @@ unsigned char Ack_message[9] = {
   '\0' // Null-terminator if needed 
   };
 unsigned char IntroMessage[6] = {'I', 'n', 't', 'r', 'o', Home_Address};
+unsigned char Device_ID[10];
 
 uint8_t ADD_Reset;
 uint8_t Sender_Address;
@@ -351,6 +354,11 @@ void Load_Vitals(){
     Home_Address = checkValue;
     Serial.print("Home Address read from EEPROM: ");
     Serial.println(Home_Address);
+    int j = 0;
+    for(int i = ID_Address; i <  ID_Address + EEPROM.read(Size_Address); i++){
+      Device_ID[j] = EEPROM.read(i);
+      j++;
+    }
   } else {
     Serial.println("No stored value found in EEPROM, initializing...");
     //call the introduction  function
@@ -365,8 +373,21 @@ void Introduction() {
     if(RS485Serial.available()){
       Addressee = Read_Serial_Port();
       if(Addressee == Home_Address) {
-        Home_Address = RX_Message_Payload[0];
+        int colonIndex = -1; 
+        for (int i = 0; i < sizeof(RX_Message_Payload); i++) { 
+          Device_ID[i] = RX_Message_Payload[i];
+          if (RX_Message_Payload[i] == ':') { 
+            colonIndex = i; 
+            break; 
+          } 
+        }
+        Home_Address = RX_Message_Payload[colonIndex+1];
+        int Size_Of = sizeof(RX_Message_Payload);
         EEPROM.write(location_address, Home_Address);
+        EEPROM.write(Size_Address, Size_Of);
+        for(int i = ID_Address; i < ID_Address + Size_Of; i++){
+          EEPROM.write(i, Device_ID[i]);
+        }
         reply_received = 1;
       }
     }
@@ -430,9 +451,19 @@ void RX_Message_Process(void *pvParameters) {
 //write function to reset address if reset_address message is received
 void Reset_Params(bool x){
   if(x){
-    EEPROM.write(location_address, Home_Address);
+    int Size_Of = sizeof(RX_Message_Payload);
+        EEPROM.write(location_address, Home_Address);
+        EEPROM.write(Size_Address, Size_Of);
+        for(int i = ID_Address; i < ID_Address + Size_Of; i++){
+          EEPROM.write(i, Device_ID[i]);
+        }
   }
   else{
     EEPROM.write(location_address, 0xFF);   //reset eeprom to default setting 11111111 this will force device to ask for a new address on boot
+    for(int i = ID_Address; i <  ID_Address + EEPROM.read(Size_Address); i++){
+        EEPROM.write(i, 0xFF);
+    }
+    EEPROM.write(Size_Address, 0xFF);
+
   }
 }
