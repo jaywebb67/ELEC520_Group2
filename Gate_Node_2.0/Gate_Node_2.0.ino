@@ -10,6 +10,7 @@
 #define I2C_SLAVE_ADDRESS 0x03 // Address of the slave device
 #define SDA_2 5 
 #define SCL_2 0
+#define YellowPin   14
 
 
 
@@ -507,6 +508,8 @@ void setup() {
   //call function to set up correct communication pins and serial port for the board in use
   Comms_Set_Up();
   Serial.println("Hello");
+  pinMode(YellowPin, OUTPUT);
+  digitalWrite(YellowPin, LOW);
   
   Wire.begin(I2C_SLAVE_ADDRESS);  // Initialize the I2C bus as a slave
   Wire.onReceive(BluetoothDataReceived);   // Register the receive event handler
@@ -611,6 +614,7 @@ void setup() {
   } else {
       Serial.println("MQTT thread task created successfully.");
   }
+  digitalWrite(YellowPin, HIGH);
 
 }
 
