@@ -193,7 +193,7 @@ void Keypad_Read(void *pvParameters) {
   
   unsigned long Start_Time;
 
-  // Create the timeout timer (10 seconds) 
+  // Create the timeout timer (8 seconds) 
   Keypad_Timeout_Timer = xTimerCreate("TimeoutTimer", pdMS_TO_TICKS(8000), pdFALSE, 0, TimeoutCallback);
 
   // Keypad layout (row-major order)
