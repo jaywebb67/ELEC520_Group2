@@ -60,8 +60,8 @@ void Transmit_To_Bus(struct TX_Payload* data, unsigned char* message){
     RS485Serial.flush();  //only required for ESP32 forces the cpu to block on the sending
     #endif
     digitalWrite(Max485_CE, LOW);
-    // Serial.print("TX_Message: ");
-    // Print_Message(message, 7 + message[4]);
+    Serial.print("TX_Message: ");
+    Print_Message(message, 7 + message[4]);
   }
 }
 

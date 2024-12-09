@@ -134,7 +134,7 @@ void MQTT_task(void* pvParameters) {
     unsigned long lastConnectionAttempt = millis();
     unsigned long lastIntrusionPing = millis();
     unsigned long lastFirePing = millis();
-    struct TX_Payload pingPayload = {8,"RESPOND"};
+    struct TX_Payload pingPayload = {7,"RESPOND"};
     // struct TX_Payload testPing = {14, "Fire online ec"};
     uint8_t temp;
     unsigned char assembledMessage[40]; // Adjust size as needed
@@ -207,10 +207,10 @@ void mqttPublisher(void* parameter) {
             Destination_Address = 0x13;
             struct TX_Payload msg;
             if(message.payload == "Alarm Disabled"){
-              msg = {14, 'Vuser'};
+              msg = {5, 'Vuser'};
             }
             else{
-              msg = {13, 'NVuser'};
+              msg = {6, 'NVuser'};
             }
             Transmit_To_Bus(&msg);
             Destination_Address = temp;

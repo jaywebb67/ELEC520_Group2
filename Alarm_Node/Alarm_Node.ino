@@ -383,10 +383,10 @@ void RX_Message_Process(void *pvParameters) {
         Destination_Address = Intrusion_Node;
         struct TX_Payload msg;
         if(strcmp((const char*)RX_Message_Payload, "Alarm Enabled") == 0){
-          msg = {7,"NVuser"};
+          msg = {6,"NVuser"};
         }
         if(strcmp((const char*)RX_Message_Payload, "Alarm Disabled") == 0){
-          msg = {6,"Vuser"};
+          msg = {5,"Vuser"};
         }
         Transmit_To_Bus(&msg);
         Destination_Address = temp;
