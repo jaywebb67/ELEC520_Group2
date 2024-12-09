@@ -22,7 +22,7 @@ struct TX_Q {
 
 struct TX_Q TXbuff_0;
 struct TX_Q TXbuff_1;
-const struct TX_Payload No_User_Cmd = {6, "NVuser"};
+struct TX_Payload No_User_Cmd = {6, "NVuser"};
 
 //ESP32 WROOM pins
 const int rowPins[4] = {18, 19, 13, 32};     // Row pins connected to the keypad
@@ -31,7 +31,7 @@ const int colPins[4] = {23, 12, 26, 27};     // Column pins connected to the key
 char Input_Key_Code[7];
 char Start_Pass[7] = {"012345"};
 //const char User_Cmd[6] = "Vuser";
-const struct TX_Payload User_Cmd = {5, "Vuser"};
+struct TX_Payload User_Cmd = {5, "Vuser"};
 //const char No_User_Cmd[7] = "NVuser";
 char receivedCode[7];
 bool codeReceived = false;
