@@ -162,27 +162,30 @@ void MQTT_task(void* pvParameters) {
                 lastConnectionAttempt = millis();
                 reconnect(1); // Attempt to reconnect
             }
-        } if (millis()-lastFirePing >=10000){
-          lastFirePing = millis();
-          temp = Destination_Address;
-            // Destination_Address = MQTT_Address;
-            
-            // Assemble_Message(&testPing, assembledMessage);
-            // Destination_Address = temp;
-            // if (xQueueSend(RX_Queue, &assembledMessage, portMAX_DELAY) != pdTRUE) {
-            //   Serial.println("Failed to send message to queue");
-            // }
-          // uint8_t temp = Destination_Address;
-          Destination_Address = Fire_Node;
-          Transmit_To_Bus(&pingPayload);
-          Destination_Address = temp;
-        }
-        if (millis()-lastIntrusionPing >=10000){
-          lastIntrusionPing = millis();
-          // uint8_t temp = Destination_Address;
-          Destination_Address = Intrusion_Node;
-          Transmit_To_Bus(&pingPayload);
-          Destination_Address = temp;
+        } 
+        if(I_am_Forwarder){
+          if (millis()-lastFirePing >=10000){
+            lastFirePing = millis();
+            temp = Destination_Address;
+              // Destination_Address = MQTT_Address;
+              
+              // Assemble_Message(&testPing, assembledMessage);
+              // Destination_Address = temp;
+              // if (xQueueSend(RX_Queue, &assembledMessage, portMAX_DELAY) != pdTRUE) {
+              //   Serial.println("Failed to send message to queue");
+              // }
+            // uint8_t temp = Destination_Address;
+            Destination_Address = Fire_Node;
+            Transmit_To_Bus(&pingPayload);
+            Destination_Address = temp;
+          }
+          if (millis()-lastIntrusionPing >=10000){
+            lastIntrusionPing = millis();
+            // uint8_t temp = Destination_Address;
+            Destination_Address = Intrusion_Node;
+            Transmit_To_Bus(&pingPayload);
+            Destination_Address = temp;
+          }
         }
 
     }
