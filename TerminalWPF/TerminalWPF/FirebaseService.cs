@@ -2,6 +2,9 @@
 using Firebase.Database.Query;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
+using System.Net.NetworkInformation;
+using System.Windows;
 
 namespace TerminalWPF
 {
@@ -16,23 +19,32 @@ namespace TerminalWPF
 
         public static async Task WriteDataAsync<T>(string path, T data)
         {
-            await firebaseClient
-                      .Child(path)
-                      .PutAsync(data);
+            if (NetworkInterface.GetIsNetworkAvailable())
+            {
+                await firebaseClient
+                          .Child(path)
+                          .PutAsync(data);
+            }
         }
 
         public static async Task<List<User>> ReadUsersAsync(string path)
         {
-            var result = await firebaseClient
-                             .Child(path)
-                             .OnceAsync<User>();
-
-            var users = new List<User>();
-            foreach (var item in result)
+            if (NetworkInterface.GetIsNetworkAvailable())
             {
-                users.Add(item.Object);
+                var result = await firebaseClient
+                                 .Child(path)
+                                 .OnceAsync<User>();
+
+                var users = new List<User>();
+                foreach (var item in result)
+                {
+                    users.Add(item.Object);
+                }
+                return users;
+            } else
+            {
+                return new List<User>();
             }
-            return users;
         }
     }
 }

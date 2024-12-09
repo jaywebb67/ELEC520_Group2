@@ -19,9 +19,7 @@
             <Button Content="Display Gate Code" Click="OnGateDataClick" Margin="5"/>
             <Button Content="Display Room Access" Click="OnRoomDataClick" Margin="5"/>
             <TextBlock Name="DisplayTextBlock" Margin="10" FontSize="16"/>
-            
-
+            <TextBlock Name="InternetConnectionStatus" HorizontalAlignment="Left" Margin="10, 30" FontSize="12"/>
         </StackPanel>
-
     </Grid>
 </Window>
