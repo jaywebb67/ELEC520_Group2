@@ -470,7 +470,7 @@ void setup() {
   Serial.println("Hello");
   pinMode(YellowPin, OUTPUT);
   digitalWrite(YellowPin, LOW);
-  
+  MQTT_SetUp();
   Wire.begin(I2C_SLAVE_ADDRESS);  // Initialize the I2C bus as a slave
   Wire.onReceive(BluetoothDataReceived);   // Register the receive event handler
   //Wire.onReceive(receiveEvent);   // Register the receive event handler
@@ -567,7 +567,7 @@ void setup() {
   RS485Serial.onReceive(onUartRx); // Attach the interrupt handler
 
   Enter_Mess();
-  MQTT_SetUp();
+
   xTaskCreatePinnedToCore(MQTT_task, "MQTT_task", 5000, NULL, 1, &mqttTaskHandle, 1);
   if (mqttTaskHandle == NULL) {
       Serial.println("Failed to create mqtt thread.");

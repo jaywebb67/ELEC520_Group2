@@ -327,6 +327,7 @@ void RX_Message_Process(void *pvParameters) {
       Serial.print("Sent from node of type: ");
       Serial.println(Sender_Node_Type);
 
+      //Serial.print()
       if((Addressee == MQTT_Address) && (I_am_Forwarder)) {
         // Create an MQTT message structure
         MqttMessage mqttMessage;
@@ -348,13 +349,15 @@ void RX_Message_Process(void *pvParameters) {
         else if (Sender_Node_Type == Fire_Node) {  // Example: Fire sensor type
             if(strncmp((const char*)RX_Message_Payload, "Fire online", 11) == 0){
                 mqttMessage.topic = "ELEC520/devicePing";
-                snprintf(firePing, sizeof(firePing), "Fire online %02X", Addressee);
+                snprintf(firePing, sizeof(firePing), "Fire online %02X", Sender_Address);
                 mqttMessage.payload = firePing;
             }
             else{
-                mqttMessage.topic = "ELEC520/temperature";
+                mqttMessage.topic = "ELEC520/devicePing";
+                snprintf(firePing, sizeof(firePing), "Fire online %02X", Addressee);
+                mqttMessage.payload = firePing;
                 // Assign the payload from RX_Message_Payload
-                mqttMessage.payload = String((char*)RX_Message_Payload);
+                //mqttMessage.payload = String((char*)RX_Message_Payload);
             }
         } else if (Sender_Node_Type == Intrusion_Node) {  // Example: Temperature node type
             if(strncmp((const char*)RX_Message_Payload, "Intrusion online",16) == 0){
@@ -377,19 +380,6 @@ void RX_Message_Process(void *pvParameters) {
         if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
             Serial.println("Failed to send message to MQTT queue");
         }
-      }
-      else if(Addressee == Home_Address){
-        uint8_t temp = Destination_Address;
-        Destination_Address = Intrusion_Node;
-        struct TX_Payload msg;
-        if(strcmp((const char*)RX_Message_Payload, "Alarm Enabled") == 0){
-          msg = {6,"NVuser"};
-        }
-        if(strcmp((const char*)RX_Message_Payload, "Alarm Disabled") == 0){
-          msg = {5,"Vuser"};
-        }
-        Transmit_To_Bus(&msg);
-        Destination_Address = temp;
       }
       
       else if(Sender_Node_Type == Fire_Node){

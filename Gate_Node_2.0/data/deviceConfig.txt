@@ -1,1 +1,1 @@
-Gate1:SMB302
+Gate2:SMB302

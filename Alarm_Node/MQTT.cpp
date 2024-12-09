@@ -135,10 +135,9 @@ void MQTT_task(void* pvParameters) {
     unsigned long lastConnectionAttempt = millis();
     unsigned long lastIntrusionPing = millis();
     unsigned long lastFirePing = millis();
-    unsigned long lastTemperaturePing = millis();
-    struct TX_Payload pingPayload = {8,"RESPOND"};
-    struct TX_Payload tempPayload = {5,"23.53"};
+    struct TX_Payload pingPayload = {7,"RESPOND"};
     // struct TX_Payload testPing = {14, "Fire online ec"};
+    uint8_t temp;
     unsigned char assembledMessage[40]; // Adjust size as needed
     while (true) {
         if (restartFlag) {
@@ -160,47 +159,40 @@ void MQTT_task(void* pvParameters) {
             }
         } else {
             // Retry reconnection every 5 minutes
-            if (millis() - lastConnectionAttempt >= 30000) { // 5 minutes
+            if (millis() - lastConnectionAttempt >= 300000) { // 5 minutes
                 lastConnectionAttempt = millis();
                 reconnect(1); // Attempt to reconnect
             }
-        } if (millis()-lastFirePing >=10000){
-          lastFirePing = millis();
-          uint8_t temp = Destination_Address;
-            // Destination_Address = MQTT_Address;
-            
-            // Assemble_Message(&testPing, assembledMessage);
-            // Destination_Address = temp;
-            // if (xQueueSend(RX_Queue, &assembledMessage, portMAX_DELAY) != pdTRUE) {
-            //   Serial.println("Failed to send message to queue");
-            // }
-          // uint8_t temp = Destination_Address;
-          Destination_Address = Fire_Node;
-          Transmit_To_Bus(&pingPayload);
-          Destination_Address = temp;
+        } 
+        if(I_am_Forwarder){
+          if (millis()-lastFirePing >=10000){
+            lastFirePing = millis();
+            temp = Destination_Address;
+              // Destination_Address = MQTT_Address;
+              
+              // Assemble_Message(&testPing, assembledMessage);
+              // Destination_Address = temp;
+              // if (xQueueSend(RX_Queue, &assembledMessage, portMAX_DELAY) != pdTRUE) {
+              //   Serial.println("Failed to send message to queue");
+              // }
+            // uint8_t temp = Destination_Address;
+            Destination_Address = Fire_Node;
+            Transmit_To_Bus(&pingPayload);
+            Destination_Address = temp;
+          }
+          if (millis()-lastIntrusionPing >=10000){
+            lastIntrusionPing = millis();
+            // uint8_t temp = Destination_Address;
+            temp = Destination_Address;
+            Destination_Address = Intrusion_Node;
+            Transmit_To_Bus(&pingPayload);
+            Destination_Address = temp;
+          }
         }
-        if (millis()-lastIntrusionPing >=10000){
-          lastIntrusionPing = millis();
-          uint8_t temp = Destination_Address;
-          Destination_Address = Intrusion_Node;
-          Transmit_To_Bus(&pingPayload);
-          Destination_Address = temp;
-        }
-        // if (millis()-lastTemperaturePing >=5000){
-        //   lastTemperaturePing = millis();
-        //   uint8_t temp = Destination_Address;
-        //   Destination_Address = MQTT_Address;
-        //   Assemble_Message(&tempPayload, assembledMessage);
-        //   Destination_Address = temp;
-        //   if (xQueueSend(RX_Queue, &assembledMessage, portMAX_DELAY) != pdTRUE) {
-        //     Serial.println("Failed to send message to queue");
-        //   }
-        //   Transmit_To_Bus(&tempPayload);
-        //   Destination_Address = temp;
-        // }
 
     }
 }
+
 
 
 void mqttPublisher(void* parameter) {
@@ -219,19 +211,19 @@ void mqttPublisher(void* parameter) {
         if(mqttClient.connected()){
           mqttClient.publish(message.topic.c_str(), combinedPayload);
         }
-        else{
-          // Set up the TX_Payload struct to send via bus
-          txPayload.length = min(strlen(combinedPayload), sizeof(txPayload.message) - 1); // Set length safely
-          strncpy(txPayload.message, combinedPayload, txPayload.length);  // Copy payload into message buffer
-          txPayload.message[txPayload.length] = '\0';  // Ensure null-termination
+        // else if(!mqttClient.connected()){
+        //   // Set up the TX_Payload struct to send via bus
+        //   txPayload.length = min(strlen(combinedPayload), sizeof(txPayload.message) - 1); // Set length safely
+        //   strncpy(txPayload.message, combinedPayload, txPayload.length);  // Copy payload into message buffer
+        //   txPayload.message[txPayload.length] = '\0';  // Ensure null-termination
 
-          // Transmit payload to the bus
-          uint8_t temp = Destination_Address;
-          Destination_Address = MQTT_Address;
-          Transmit_To_Bus(&txPayload);
-          Destination_Address = temp;
+        //   // Transmit payload to the bus
+        //   uint8_t temp = Destination_Address;
+        //   Destination_Address = MQTT_Address;
+        //   Transmit_To_Bus(&txPayload);
+        //   Destination_Address = temp;
 
-        }
+        // }
     }
   }
 }
@@ -247,7 +239,7 @@ void reconnect(bool onSetUp) {
 
       while (attempts < 10 && WiFi.status() != WL_CONNECTED) {
           Serial.print(".");
-          vTaskDelay(5000 / portTICK_PERIOD_MS);
+          vTaskDelay(1000 / portTICK_PERIOD_MS);
           attempts++;
       }
       if(WiFi.status() != WL_CONNECTED){
@@ -625,10 +617,10 @@ void mqttHandler(void* pvParameters) {
                   Serial.println("Disabling Alarm triggered!");
                   Disable_Alarm();
                 }
-                msg = {6,"Vuser"};
+                msg = {5,"Vuser"};
               }
               if(receivedMsg.payload == "Alarm Enabled"){
-                msg = {7,"NVuser"};
+                msg = {6,"NVuser"};
               }
               Transmit_To_Bus(&msg);
               Destination_Address = temp;
