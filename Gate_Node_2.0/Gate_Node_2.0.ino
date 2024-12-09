@@ -26,7 +26,7 @@ const struct TX_Payload No_User_Cmd = {6, "NVuser"};
 
 //ESP32 WROOM pins
 const int rowPins[4] = {18, 19, 13, 32};     // Row pins connected to the keypad
-const int colPins[4] = {23, 25, 26, 27};     // Column pins connected to the keypad
+const int colPins[4] = {23, 12, 26, 27};     // Column pins connected to the keypad
 
 char Input_Key_Code[7];
 char Start_Pass[7] = {"012345"};
@@ -286,6 +286,10 @@ void Keypad_Read(void *pvParameters) {
           pressedCount++;
           foundRow = row;
           foundCol = col;
+          Serial.print("Row: ");
+          Serial.print(foundRow);
+          Serial.print("Column: ");
+          Serial.println(foundCol);
         }
       }
 
@@ -339,8 +343,8 @@ void RX_Message_Process(void *pvParameters) {
       Addressee = Decode_Message(receivedMessage, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
       // Process received message
 
-      Serial.print("Sent from node of type: ");
-      Serial.println(Sender_Node_Type);
+      // Serial.print("Sent from node of type: ");
+      // Serial.println(Sender_Node_Type);
 
       if((Addressee == MQTT_Address) && (I_am_Forwarder)) {
         // Create an MQTT message structure
