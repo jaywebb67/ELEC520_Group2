@@ -362,7 +362,7 @@ void RX_Message_Process(void *pvParameters) {
         } else if (Sender_Node_Type == Intrusion_Node) {  // Example: Temperature node type
             if(strncmp((const char*)RX_Message_Payload, "Intrusion online",16) == 0){
               mqttMessage.topic = "ELEC520/devicePing";
-              snprintf(intrusionPing, sizeof(intrusionPing), "Intrusion online %02X", Addressee);
+              snprintf(intrusionPing, sizeof(intrusionPing), "Intrusion online %02X", Sender_Address);
               mqttMessage.payload = intrusionPing;
             }
           
