@@ -110,6 +110,7 @@ unsigned char Read_Serial_Port() {
     char incomingByte = RS485Serial.read();
     Serial.print("Received byte: 0x");
     Serial.println(incomingByte, HEX);
+    //delayMicroseconds(500);
 
     if (incomingByte == 0x02) {
       // Reset buffers and start from the beginning if the start byte is found

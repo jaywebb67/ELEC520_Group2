@@ -70,6 +70,7 @@ void setup() {
 void loop() {
   if(RS485Serial.available()){
     Addressee = Read_Serial_Port();
+    Serial.println((char*)RX_Message_Payload);
   
     if(Addressee == Home_Address){
       Serial.println((char*)RX_Message_Payload);
