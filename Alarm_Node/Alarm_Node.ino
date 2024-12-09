@@ -70,7 +70,7 @@ void setup() {
   pinMode(YellowPin, OUTPUT);
   pinMode(PurplePin, OUTPUT);
   digitalWrite(RedPin_1, LOW);
-  digitalWrite(RedPin_1, LOW);
+  digitalWrite(RedPin_2, LOW);
   digitalWrite(YellowPin, HIGH);
   digitalWrite(PurplePin, LOW);
   ledcWrite(PinkPin, Pduty);
@@ -109,6 +109,8 @@ void setup() {
     0
     );
 
+    vTaskSuspend(LED_Flash);
+
   // Initialize row & column pins 
   for (int i = 0; i < 4; i++) {
     pinMode(rowPins[i], OUTPUT);
@@ -129,6 +131,7 @@ void setup() {
   } else {
       Serial.println("MQTT thread task created successfully.");
   }
+  
 
 }
 

@@ -482,7 +482,7 @@ void setup() {
 
   LCD_Innit();
   
-  MQTT_SetUp();
+
   
 
   
@@ -563,7 +563,7 @@ void setup() {
   RS485Serial.onReceive(onUartRx); // Attach the interrupt handler
 
   Enter_Mess();
-
+  MQTT_SetUp();
   xTaskCreatePinnedToCore(MQTT_task, "MQTT_task", 5000, NULL, 1, &mqttTaskHandle, 1);
   if (mqttTaskHandle == NULL) {
       Serial.println("Failed to create mqtt thread.");
