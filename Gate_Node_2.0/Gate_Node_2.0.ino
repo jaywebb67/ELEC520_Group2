@@ -45,7 +45,7 @@ volatile uint8_t Valid_Input_Presses = 0;
 volatile unsigned long lastInterruptTime = 0;
 volatile bool isPressed = false;
 bool alarmEnabled = true;
-String newNodePayload = "";
+char newNodePayload[34];
 char firePing[32] ;
 char intrusionPing[32];
 // Define task handles
@@ -407,51 +407,7 @@ void RX_Message_Process(void *pvParameters) {
         Destination_Address = temp;
       }
       
-      else if(Sender_Node_Type == Fire_Node){
-        MqttMessage mqttMessage;
-        Serial.println("It's a fire node");
-        if(strcmp((const char*)RX_Message_Payload, "Fire Call") == 0){
-          Serial.println("It's a call event");
-          Set_Alarm(PinkPin, Pduty);
-          alarmTriggered = true;
-          mqttMessage.topic = "ELEC520/alarm";
-          // Assign the payload from RX_Message_Payload
-          mqttMessage.payload = String((char*)RX_Message_Payload);
-          // Send the MQTT message to the queue
-          if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
-              Serial.println("Failed to send message to MQTT queue");
-          }
-        }
-        else if (strcmp((const char*)RX_Message_Payload, "Heat Alarm") == 0){
-          Set_Alarm(BluePin, Bduty);
-          alarmTriggered = true;
-          mqttMessage.topic = "ELEC520/alarm";
-          // Assign the payload from RX_Message_Payload
-          mqttMessage.payload = String((char*)RX_Message_Payload);
-          // Send the MQTT message to the queue
-          if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
-              Serial.println("Failed to send message to MQTT queue");
-          }
-        }
-        else if(strcmp((const char*)RX_Message_Payload, "Sensor Error") == 0){
-          
-          Heat_Sensor_Error = true;
-          //wake mqtt message thread
-        }
-      }
-      else if(Sender_Node_Type == Intrusion_Node) {
-          Set_Alarm(GreenPin, Gduty);
-          alarmTriggered = true;
-          MqttMessage mqttMessage;
-          mqttMessage.topic = "ELEC520/alarm";
-          // Assign the payload from RX_Message_Payload
-          mqttMessage.payload = String((char*)RX_Message_Payload);
-          // Send the MQTT message to the queue
-          if (xQueueSend(mqttPublishQueue, &mqttMessage, portMAX_DELAY) != pdPASS) {
-              Serial.println("Failed to send message to MQTT queue");
-          }
-          //tone(SPEAKER_PIN, 400,500);
-      }
+
 
       // Serial.print("Received message: ");
       // for (int i = 0; i < MESSAGE_LENGTH; i++) {

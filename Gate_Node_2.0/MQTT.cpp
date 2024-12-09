@@ -517,15 +517,15 @@ void mqttHandler(void* pvParameters) {
                 restartFlag = 1;
               }
           }
-          else if (receivedMsg.topic == "ELEC520/test"){
-            struct TX_Payload testConfig = {7, "Intro:32"};
-            unsigned char assembledMessage[40]; // Adjust size as needed
-            Assemble_Message(&testConfig, assembledMessage);
+          // else if (receivedMsg.topic == "ELEC520/test"){
+          //   struct TX_Payload testConfig = {7, "Intro:32"};
+          //   // unsigned char assembledMessage[40]; // Adjust size as needed
+          //   // Assemble_Message(&testConfig, assembledMessage);
 
-            if (xQueueSend(RX_Queue, &assembledMessage, portMAX_DELAY) != pdTRUE) {
-              Serial.println("Failed to send message to queue");
-            }
-          }
+          //   // if (xQueueSend(RX_Queue, &assembledMessage, portMAX_DELAY) != pdTRUE) {
+          //   //   Serial.println("Failed to send message to queue");
+          //   // }
+          // }
           else if (receivedMsg.topic == "ELEC520/forwarder") {
               Serial.println(receivedMsg.payload);
               if(receivedMsg.payload == clientId.c_str()){
