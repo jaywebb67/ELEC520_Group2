@@ -93,9 +93,16 @@ void Process_BT_Message(void *pvParameters) {
       uint8_t response = 0;
       response = Wire.read();
       Wire.requestFrom(I2C_SLAVE_ADDRESS, 1);
-      delay(10);
+      //delay(20);
+      bool RR = false;
+      while(!RR){
+        if(Wire.available()){
+          response = Wire.read();
+          RR = true;
+        }
+      }
       //Serial.println(response);
-      response = Wire.read();
+      
       // Serial.print("response: ");
       // Serial.println(response);
       switch (response) {
