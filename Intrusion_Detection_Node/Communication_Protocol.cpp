@@ -93,7 +93,7 @@ void Comms_Set_Up(){
   #endif
   attachInterrupt(digitalPinToInterrupt(Bus_Monitor_Pin), Bus_Monitor_Pin_interrupt, CHANGE);
   delay(1000);
-  Load_Vitals();
+  // Load_Vitals();
 }
 
 

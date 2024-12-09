@@ -8,6 +8,7 @@
 #define mSensPin  8
 
 uint8_t Location;
+uint8_t MQTT_Address = 0x0A;
 uint8_t Home_Node_Type = 0x42;
 uint8_t Home_Address = 0x0F;    //Default address for initial set up
 uint8_t Destination_Address = 0x0A;   //Default address for initial set up
@@ -19,7 +20,7 @@ const char No_User_Cmd[7] = "NVuser";
 
 
 const struct TX_Payload Intrusion = {14, "Intruder alarm"};
-const struct TX_Payload Alive = {8, "Intrusion online"};
+const struct TX_Payload Alive = {16, "Intrusion online"};
 
 // Ultrasonic Setup
 bool ultraSonicAlert = false;
@@ -74,8 +75,8 @@ void loop() {
   while(true) {
     if(RS485Serial.available()){
       Addressee = Read_Serial_Port();
-      Serial.print("RX_Message: ");
-      Print_Message(RX_Message, 7 + RX_Message[4]);
+      // Serial.print("RX_Message: ");
+      // Print_Message(RX_Message, 7 + RX_Message[4]);
       Serial.println((char*)RX_Message_Payload);
 
       if(Addressee == Home_Address){
