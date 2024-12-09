@@ -59,8 +59,8 @@ void Transmit_To_Bus(struct TX_Payload* data, unsigned char* message){
     RS485Serial.flush();  //only required for ESP32 forces the cpu to block on the sending
     #endif
     digitalWrite(Max485_CE, LOW);
-    Serial.print("TX_Message: ");
-    Print_Message(message, 7 + message[4]);
+    // Serial.print("TX_Message: ");
+    // Print_Message(message, 7 + message[4]);
   }
 }
 
@@ -108,9 +108,9 @@ unsigned char Read_Serial_Port() {
   // Read bytes until the complete message with start and end bytes is found
   while (RS485Serial.available()) {
     char incomingByte = RS485Serial.read();
-    Serial.print("Received byte: 0x");
-    Serial.println(incomingByte, HEX);
-    //delayMicroseconds(500);
+    // Serial.print("Received byte: 0x");
+    // Serial.println(incomingByte, HEX);
+    delayMicroseconds(100);
 
     if (incomingByte == 0x02) {
       // Reset buffers and start from the beginning if the start byte is found

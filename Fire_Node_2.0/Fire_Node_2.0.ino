@@ -31,7 +31,7 @@ DHT dht(DHTPIN, DHTTYPE);
 
 void alarm_Pressed_interrupt() {
   alarm_Pressed = true;
-  Serial.println("ISR");
+  //Serial.println("ISR");
 }
 
 void Test_Heat_Sensor() {
