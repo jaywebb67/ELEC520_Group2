@@ -10,10 +10,10 @@
    //need to send location byte may need to be variable to fit in struct
 // uint8_t Location;
 uint8_t Home_Node_Type = 0x32;
-uint8_t Home_Address = 0x28;    //Default address for initial set up
+uint8_t Home_Address = 0x32;    //Default address for initial set up
 uint8_t Destination_Address = 0x13;   //Default address for initial set up
 uint8_t Node_3 = 0x33;
-const char Respond_Cmd[7] = "RESPOND";
+const char Respond_Cmd[8] = "RESPOND";
 const char Reset_Cmd[6] = "RESET";
 volatile bool alarm_Pressed = false;
 String LED = "LED";
@@ -84,6 +84,7 @@ void loop() {
         digitalWrite(RedPin, LOW);
       }
       if (strcmp((char*)RX_Message_Payload, Respond_Cmd) == 0) {
+        Serial.println("responding");
         Transmit_To_Bus(&Alive);
       }
     }
