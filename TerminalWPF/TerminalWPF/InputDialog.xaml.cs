@@ -2,6 +2,7 @@
 using System.Windows.Input;
 using System.Text.RegularExpressions;
 using System.Windows.Controls;
+using System.Diagnostics;
 
 namespace TerminalWPF
 {
@@ -15,15 +16,19 @@ namespace TerminalWPF
         {
             InitializeComponent();
             Finished = false;
+            Rooms = string.Empty;
         }
 
         private void OnNextClick(object sender, RoutedEventArgs e)
         {
             InputText = InputTextBox.Text;
 
-            Rooms = Rooms + InputText + ", ";
-            InputTextBox.Text = string.Empty;
-            InputTextBox.Focus();
+            if (InputText != string.Empty)
+            {
+                Rooms = Rooms + InputText + ", ";
+                InputTextBox.Text = string.Empty;
+                InputTextBox.Focus();
+            }
         }
 
         private void OnFinishedClick(object sender, RoutedEventArgs e)
@@ -31,7 +36,11 @@ namespace TerminalWPF
             InputText = InputTextBox.Text;
             if (InputText == string.Empty)
             {
-                Rooms = Rooms.Remove(Rooms.Length - 2);
+                Debug.Print(Rooms);
+                if (Rooms != string.Empty)
+                {
+                    Rooms = Rooms.Remove(Rooms.Length - 2);
+                }
             }
             else
             {

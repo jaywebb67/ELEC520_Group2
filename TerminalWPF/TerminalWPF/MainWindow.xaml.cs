@@ -32,9 +32,6 @@ namespace TerminalWPF
         }
 
 
-
-
-
         private async void LoadUsers()
         {
             users = await FirebaseService.ReadUsersAsync("users");
@@ -53,6 +50,9 @@ namespace TerminalWPF
                 if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password) || gateCode == "no available code")
                 {
                     UserDisplayTextBlock.Text = "Please enter a username, password, and ensure there are available codes.";
+                    return;
+                } else if (users.Any(u => u.username == username)){
+                    UserDisplayTextBlock.Text = "Username already exists, please try another.";
                     return;
                 }
 
