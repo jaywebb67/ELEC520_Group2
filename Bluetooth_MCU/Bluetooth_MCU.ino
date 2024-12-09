@@ -32,7 +32,7 @@ void setup() {
   );
 
   SerialBT.onData(onBluetoothDataReceived);
-  SerialBT.begin("ESP32_BT"); // Initialize Bluetooth
+  SerialBT.begin("Gate 2"); // Initialize Bluetooth
   Serial.println("The device started, now you can pair it with Bluetooth!");
 }
 
