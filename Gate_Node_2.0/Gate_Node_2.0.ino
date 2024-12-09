@@ -167,73 +167,77 @@ int Test_Entry_Code(const char* code) {
   if (x < 0) {
     Serial.println("Access Denied");
     return 1;
-  } else {
-      // Get the username corresponding to the code
-      String username = Valid_Entrance_Codes.findUsername(x);
-      if (username.isEmpty()) {
-        Serial.println("Error retrieving username.");
-        return -1; // Error case
+  } 
+  else {
+    // Get the username corresponding to the code
+    String username = Valid_Entrance_Codes.findUsername(x);
+    if (username.isEmpty()) {
+      Serial.println("Error retrieving username.");
+      return -1; // Error case
+    }
+
+    // Format "username:password" pair
+    const int formattedLength = username.length() + 1 + strlen(code) + 1; // username + ':' + code + '\0'
+    char* formattedEntry = new char[formattedLength];
+    snprintf(formattedEntry, formattedLength, "%s:%s", username.c_str(), code);
+
+    // Check if the code is already in use
+    x = Current_Codes_In_Use.searchEntry(code);
+    if (x < 0) {
+      Serial.println("Access Granted");
+      Current_Codes_In_Use.addEntry(formattedEntry); // Add the formatted "username:password" pair
+      delete[] formattedEntry; // Free memory for the formatted entry
+      Current_Codes_In_Use.printBuffer();
+
+      // Prepare MQTT message
+      MqttMessage msg;
+      msg.topic = "ELEC520/userAccess";
+      msg.payload = username;
+      //delete[] username;
+      // Send the message to the queue
+      if (xQueueSend(mqttPublishQueue, &msg, portMAX_DELAY) != pdPASS) {
+        Serial.println("Failed to send message to MQTT queue");
       }
-
-      // Format "username:password" pair
-      const int formattedLength = username.length() + 1 + strlen(code) + 1; // username + ':' + code + '\0'
-      char* formattedEntry = new char[formattedLength];
-      snprintf(formattedEntry, formattedLength, "%s:%s", username.c_str(), code);
-
-      // Check if the code is already in use
-      x = Current_Codes_In_Use.searchEntry(code);
-      if (x < 0) {
-        Serial.println("Access Granted");
-        Current_Codes_In_Use.addEntry(formattedEntry); // Add the formatted "username:password" pair
-        delete[] formattedEntry; // Free memory for the formatted entry
-        Current_Codes_In_Use.printBuffer();
-
-        // Prepare MQTT message
-        MqttMessage msg;
-        msg.topic = "ELEC520/userAccess";
-        msg.payload = username;
-        //delete[] username;
+      if((Current_Codes_In_Use.getCurrentIndex()==0)){
+        MqttMessage msgAlarm;
+        msgAlarm.topic = "ELEC520/alarm";
+        msgAlarm.payload = "Alarm Disabled";
+        Transmit_To_Bus(&User_Cmd);
         // Send the message to the queue
-        if (xQueueSend(mqttPublishQueue, &msg, portMAX_DELAY) != pdPASS) {
+        if (xQueueSend(mqttPublishQueue, &msgAlarm, portMAX_DELAY) != pdPASS) {
           Serial.println("Failed to send message to MQTT queue");
         }
-        if((Current_Codes_In_Use.getCurrentIndex()>0)){
-          MqttMessage msgAlarm;
-          msgAlarm.topic = "ELEC520/alarm";
-          msgAlarm.payload = "Alarm Disabled";
-          // Send the message to the queue
-          if (xQueueSend(mqttPublishQueue, &msgAlarm, portMAX_DELAY) != pdPASS) {
-            Serial.println("Failed to send message to MQTT queue");
-          }
-          alarmEnabled = false;
-        }
-        return 2;
-      } else {
-        delete[] formattedEntry; // Free memory for the formatted entry
-        Serial.println("Exit Goodbye");
-        Current_Codes_In_Use.deleteEntry(x); 
-        Current_Codes_In_Use.printBuffer();
-        // Prepare MQTT message
-        MqttMessage msg;
-        msg.topic = "ELEC520/userAccess";
-        msg.payload = username;
-        //delete[] username;
+        alarmEnabled = false;
+      }
+      return 2;
+    } 
+    else {
+      delete[] formattedEntry; // Free memory for the formatted entry
+      Serial.println("Exit Goodbye");
+      Current_Codes_In_Use.deleteEntry(x); 
+      Current_Codes_In_Use.printBuffer();
+      // Prepare MQTT message
+      MqttMessage msg;
+      msg.topic = "ELEC520/userAccess";
+      msg.payload = username;
+      //delete[] username;
+      // Send the message to the queue
+      if (xQueueSend(mqttPublishQueue, &msg, portMAX_DELAY) != pdPASS) {
+        Serial.println("Failed to send message to MQTT queue");
+      }
+      if((Current_Codes_In_Use.getCurrentIndex()<0)){
+        MqttMessage msgAlarm;
+        msgAlarm.topic = "ELEC520/alarm";
+        msgAlarm.payload = "Alarm Enabled";
+        Transmit_To_Bus(&No_User_Cmd);
         // Send the message to the queue
-        if (xQueueSend(mqttPublishQueue, &msg, portMAX_DELAY) != pdPASS) {
+        if (xQueueSend(mqttPublishQueue, &msgAlarm, portMAX_DELAY) != pdPASS) {
           Serial.println("Failed to send message to MQTT queue");
         }
-        if((Current_Codes_In_Use.getCurrentIndex()==0)){
-          MqttMessage msgAlarm;
-          msgAlarm.topic = "ELEC520/alarm";
-          msgAlarm.payload = "Alarm Enabled";
-          // Send the message to the queue
-          if (xQueueSend(mqttPublishQueue, &msgAlarm, portMAX_DELAY) != pdPASS) {
-            Serial.println("Failed to send message to MQTT queue");
-          }
-          alarmEnabled = true;
-        }
-        return 3;
+        alarmEnabled = true;
       }
+      return 3;
+    }
   }
 }
 
