@@ -301,6 +301,13 @@ mqttClient.on('message', async (topic, message) => {
           }
       } else {
           try {
+            
+            const [deviceType] = payload.split(' ');
+  
+            if (!username) {
+                console.error('Invalid message format. Expected "deviceType".');
+                return;
+            }
             // Generate a new device ID and random address
             const { newDeviceID, randomAddress } = await getDeviceID(deviceType);
 

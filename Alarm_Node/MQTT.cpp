@@ -159,7 +159,7 @@ void MQTT_task(void* pvParameters) {
             }
         } else {
             // Retry reconnection every 5 minutes
-            if (millis() - lastConnectionAttempt >= 300000) { // 5 minutes
+            if (millis() - lastConnectionAttempt >= 30000) { // 5 minutes
                 lastConnectionAttempt = millis();
                 reconnect(1); // Attempt to reconnect
             }
@@ -180,11 +180,12 @@ void MQTT_task(void* pvParameters) {
             Transmit_To_Bus(&pingPayload);
             Destination_Address = temp;
           }
-          if (millis()-lastIntrusionPing >=10000){
+          if (millis()-lastIntrusionPing >=12000){
             lastIntrusionPing = millis();
             // uint8_t temp = Destination_Address;
             temp = Destination_Address;
             Destination_Address = Intrusion_Node;
+            
             Transmit_To_Bus(&pingPayload);
             Destination_Address = temp;
           }
@@ -364,7 +365,7 @@ void reconnect(bool onSetUp) {
         } else {
             Serial.print("MQTT connection failed, rc=");
             Serial.println(mqttClient.state());
-            Serial.println("Retrying in 5 seconds");
+            //Serial.println("Retrying in 5 seconds");
         }
     }
 }
@@ -395,8 +396,13 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
     MqttMessage msg = {String(topic), String(payloadBuffer)};
     //Serial.println(msg.payload);
-    if (xQueueSend(mqttMessageQueue, &msg, portMAX_DELAY) != pdTRUE) {
-        Serial.println("Failed to send message to queue");
+    if(msg.payload == "Fire Call" || msg.payload == "Heat Alarm" || msg.payload == "Sensor error" || msg.payload == "Intruder Alarm" ){
+      Serial.println("Message Skipped");
+    }
+    else{
+      if (xQueueSend(mqttMessageQueue, &msg, portMAX_DELAY) != pdTRUE) {
+          Serial.println("Failed to send message to queue");
+      }
     }
 }
 
@@ -495,7 +501,7 @@ void mqttHandler(void* pvParameters) {
             else{
               I_am_Forwarder = false;
             }
-          
+            Serial.println(I_am_Forwarder);
           }
           else if (receivedMsg.topic == "ELEC520/users/admin/updateNeeded") {
               if(receivedMsg.payload == "1"){
@@ -616,13 +622,18 @@ void mqttHandler(void* pvParameters) {
                 if(alarmTriggered){
                   Serial.println("Disabling Alarm triggered!");
                   Disable_Alarm();
+                  msg = {5,"Vuser"};
+                  Transmit_To_Bus(&msg);
+                  Destination_Address = Fire_Node;
+                  msg = {5,"RESET"};
+                  Transmit_To_Bus(&msg);
                 }
-                msg = {5,"Vuser"};
+                
               }
               if(receivedMsg.payload == "Alarm Enabled"){
                 msg = {6,"NVuser"};
               }
-              Transmit_To_Bus(&msg);
+              
               Destination_Address = temp;
           }
 

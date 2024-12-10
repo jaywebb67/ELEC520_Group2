@@ -19,12 +19,13 @@ volatile bool alarm_Pressed = false;
 String LED = "LED";
 const uint32_t Max_Temp = 45;
 unsigned long Last_Time = 0;
+uint32_t count = 0; 
 
 
 const struct TX_Payload Fire_1 = {9, "Fire Call"};
 const struct TX_Payload Fire_2 = {12, "Sensor error"};
 const struct TX_Payload Fire_3 = {10, "Heat Alarm"};
-const struct TX_Payload Alive = {8, "Fire online"};
+const struct TX_Payload Alive = {11, "Fire online"};
 struct TX_Payload Hello = {2, "Hi"};
 
 DHT dht(DHTPIN, DHTTYPE);
@@ -37,7 +38,7 @@ void alarm_Pressed_interrupt() {
 void Test_Heat_Sensor() {
   // Reading temperature takes about 250 milliseconds!
   float t = dht.readTemperature();
-
+  count++;
   if (isnan(t)) {
     Serial.println("Failed to read from DHT sensor!");
     Serial.println();
@@ -46,7 +47,7 @@ void Test_Heat_Sensor() {
 
   // Serial.print("Temperature read = ");
   // Serial.println(t);
-  t += random(1, 30); // Simulate temperature fluctuation for testing
+  t += random(1, 25); // Simulate temperature fluctuation for testing
   // Serial.print("New Temperature = ");
   // Serial.println(t);
   
@@ -55,6 +56,42 @@ void Test_Heat_Sensor() {
     Transmit_To_Bus(&Fire_3);
     digitalWrite(RedPin, HIGH);
   }
+  
+  else if (count == 10) {
+      struct TX_Payload Fire_temp;
+
+
+      // Check for NAN before proceeding
+      if (isnan(t)) {
+          Serial.println("Error: Temperature is NAN");
+          return;  // Exit early to avoid corrupt data
+      }
+
+      // Convert float to char array using dtostrf
+      char tempBuffer[16];  // Buffer for the temperature string
+      dtostrf(t, 6, 2, tempBuffer); // Width = 6, Precision = 2 (e.g., " 23.45")
+
+      // Safely copy into the payload structure
+      Fire_temp.length = strlen(tempBuffer);  // Length of the message
+      strncpy(Fire_temp.message, tempBuffer, sizeof(Fire_temp.message));
+      Fire_temp.message[sizeof(Fire_temp.message) - 1] = '\0';  // Ensure null termination
+
+      // Debug print to verify the conversion
+      Serial.print("Formatted Temperature String: ");
+      Serial.println(tempBuffer);
+
+      // Save the current destination address and transmit the payload
+      uint8_t temp = Destination_Address;
+      Destination_Address = 0x0A;
+      Transmit_To_Bus(&Fire_temp);
+      Destination_Address = temp;
+
+      count = 0;  // Reset the counter
+  }
+
+
+
+
 }
 
 void setup() {
@@ -65,12 +102,13 @@ void setup() {
   dht.begin();
   attachInterrupt(digitalPinToInterrupt(Alarm_Pin),alarm_Pressed_interrupt, FALLING);
   alarm_Pressed = false;
+  
 }
 
 void loop() {
   if(RS485Serial.available()){
     Addressee = Read_Serial_Port();
-    Serial.println((char*)RX_Message_Payload);
+    //Serial.println((char*)RX_Message_Payload);
   
     if(Addressee == Home_Address){
       Serial.println((char*)RX_Message_Payload);
@@ -80,6 +118,7 @@ void loop() {
       Serial.println(Sender_Node_Type, HEX);
       // Handle specific commands
       if (strcmp((char*)RX_Message_Payload, Reset_Cmd) == 0) {
+        Serial.println("Restting alarm...");
         alarm_Pressed = false;
         digitalWrite(RedPin, LOW);
       }
@@ -97,10 +136,10 @@ void loop() {
       Serial.println(Sender_Address, HEX);
     }
     else{
-      Serial.print("Address mismatch: Received ");
-      Serial.print(Addressee, HEX);
-      Serial.print(", Expected ");       
-      Serial.println(Home_Address, HEX);
+      // Serial.print("Address mismatch: Received ");
+      // Serial.print(Addressee, HEX);
+      // Serial.print(", Expected ");       
+      // Serial.println(Home_Address, HEX);
     }
   }
 

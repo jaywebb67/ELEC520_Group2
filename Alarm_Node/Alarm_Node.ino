@@ -323,9 +323,9 @@ void RX_Message_Process(void *pvParameters) {
       memset(RX_Message_Payload, 0, sizeof(RX_Message_Payload));
       Addressee = Decode_Message(receivedMessage, &Sender_Address, &Sender_Node_Type, RX_Message_Payload);
       // Process received message
-
-      Serial.print("Sent from node of type: ");
-      Serial.println(Sender_Node_Type);
+      Serial.println((char*)RX_Message_Payload);
+      // Serial.print("Sent from node of type: ");
+      // Serial.println(Sender_Node_Type);
 
       //Serial.print()
       if((Addressee == MQTT_Address) && (I_am_Forwarder)) {
@@ -353,11 +353,9 @@ void RX_Message_Process(void *pvParameters) {
                 mqttMessage.payload = firePing;
             }
             else{
-                mqttMessage.topic = "ELEC520/devicePing";
-                snprintf(firePing, sizeof(firePing), "Fire online %02X", Addressee);
-                mqttMessage.payload = firePing;
+                mqttMessage.topic = "ELEC520/temperature";
                 // Assign the payload from RX_Message_Payload
-                //mqttMessage.payload = String((char*)RX_Message_Payload);
+                mqttMessage.payload = String((char*)RX_Message_Payload);
             }
         } else if (Sender_Node_Type == Intrusion_Node) {  // Example: Temperature node type
             if(strncmp((const char*)RX_Message_Payload, "Intrusion online",16) == 0){

@@ -39,7 +39,7 @@ unsigned char Ack_message[9] = {
 uint8_t Fire_Node = 0x32;
 uint8_t Intrusion_Node = 0x42;
 uint8_t Home_Address = 0x13;
-uint8_t Destination_Address = 0x28;
+uint8_t Destination_Address = 0x32;
 uint8_t Location;
 uint8_t Sender_Address;
 uint8_t Sender_Node_Type;
