@@ -1,3 +1,8 @@
+/*
+ *ELEC_520 
+ *authored by Alex Meredith, and Jay Webb
+*/ 
+
 #include <Wire.h>
 #include "I2C_LCD.h"
 #include "LCD_Manager.h"
@@ -44,6 +49,7 @@ unsigned long debounceDelay = 250;        // Debounce time in milliseconds
 volatile uint8_t Valid_Input_Presses = 0;
 volatile unsigned long lastInterruptTime = 0;
 volatile bool isPressed = false;
+uint32_t buffno;
 bool alarmEnabled = true;
 char newNodePayload[34];
 char firePing[32] ;
@@ -202,7 +208,9 @@ int Test_Entry_Code(const char* code) {
         MqttMessage msgAlarm;
         msgAlarm.topic = "ELEC520/alarm";
         msgAlarm.payload = "Alarm Disabled";
+
         Transmit_To_Bus(&User_Cmd);
+        Serial.println("Valid user in");
         // Send the message to the queue
         if (xQueueSend(mqttPublishQueue, &msgAlarm, portMAX_DELAY) != pdPASS) {
           Serial.println("Failed to send message to MQTT queue");
@@ -230,6 +238,7 @@ int Test_Entry_Code(const char* code) {
         msgAlarm.topic = "ELEC520/alarm";
         msgAlarm.payload = "Alarm Enabled";
         Transmit_To_Bus(&No_User_Cmd);
+        Serial.println("No valid user");
         // Send the message to the queue
         if (xQueueSend(mqttPublishQueue, &msgAlarm, portMAX_DELAY) != pdPASS) {
           Serial.println("Failed to send message to MQTT queue");
@@ -318,6 +327,12 @@ void Keypad_Read(void *pvParameters) {
       if(Valid_Input_Presses == 6){
         // Process the valid 6-byte code
         int y = Test_Entry_Code(Input_Key_Code);
+        if(buffno==0){
+          Transmit_To_Bus(&User_Cmd);
+        }
+        else if (buffno < 0){
+          Transmit_To_Bus(&No_User_Cmd);
+        }
         notify_User(y);
         Serial.println(y);
         Serial.println(Input_Key_Code);

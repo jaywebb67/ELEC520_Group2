@@ -1,3 +1,8 @@
+/*
+ *ELEC_520 
+ *authored by Alex Meredith
+*/
+
 #include <Wire.h>
 #include <BluetoothSerial.h>
 
@@ -83,13 +88,13 @@ void Process_BT_Message(void *pvParameters) {
     //Serial.println("request sent");
     uint32_t start_T = millis();
     
-    while(!Wire.available()) {                      //wait till slave responds
-      if (millis() - start_T >= Timeout) { 
-        SerialBT.println("Timeout"); 
-        break; // Exit if timeout occurs 
-      } 
-    }
-    if (Wire.available()) {
+    // while(!Wire.available()) {                      //wait till slave responds
+    //   if (millis() - start_T >= Timeout) { 
+    //     SerialBT.println("Timeout"); 
+    //     break; // Exit if timeout occurs 
+    //   } 
+    // }
+     //if (Wire.available()) {
       uint8_t response = 0;
       response = Wire.read();
       Wire.requestFrom(I2C_SLAVE_ADDRESS, 1);
@@ -122,8 +127,8 @@ void Process_BT_Message(void *pvParameters) {
       }
     bytes_Received = 0; // Reset bytes_Received for the next code
     }
-    else {
-      SerialBT.println("Timeout");
-    }
-  }
+    // else {
+    //   SerialBT.println("Timeout");
+    // }
+  //}
 }

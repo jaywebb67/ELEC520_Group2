@@ -1,5 +1,9 @@
+/*
+ *ELEC_520 
+ *authored by Alex Meredith
+*/ 
+
 #include "Communication_Protocol.h"
-//#include "Node_Config.h"
 //.cpp v 2.4
 
 struct Set_Up_Pins Nano = {RX_Pin_A, TX_Pin_A, Max485_CE, Bus_Monitor_Pin};
@@ -39,7 +43,7 @@ unsigned char Ack_message[9] = {
 uint8_t Fire_Node = 0x32;
 uint8_t Intrusion_Node = 0x42;
 uint8_t Home_Address = 0x23;
-uint8_t Destination_Address = 0x28;
+uint8_t Destination_Address = 0x0F;
 uint8_t Location;
 uint8_t Sender_Address;
 uint8_t Sender_Node_Type;
@@ -79,7 +83,7 @@ void Comms_Set_Up(){
   #endif
   
   delay(1000);
-  //Introduction();
+  Load_Vitals();
   Serial.println("End of ESp32 Comms setup");
 }
 
@@ -299,17 +303,96 @@ void Read_Serial_Data() {
   }
 }
 
+void Load_Vitals(){
+  #if defined(ARDUINO_AVR_NANO)
+    // Initialize storedValue to check if the EEPROM has been written
+    int checkValue = EEPROM.read(location_address);
+
+    // Check if the stored value is valid (i.e., not uninitialized EEPROM content)
+    if (checkValue != 255) {        // EEPROM is initially set to 255 (default erased state)
+      Home_Address = checkValue;
+      Serial.print("Home Address read from EEPROM: ");
+      Serial.println(Home_Address);
+      int j = 0;
+      for(int i = ID_Address; i <  ID_Address + EEPROM.read(Size_Address); i++){
+        Device_ID[j] = EEPROM.read(i);
+        j++;
+      }
+    } else {
+      Serial.println("No stored value found in EEPROM, initializing...");
+      //call the introduction  function
+      Introduction();
+  }
+  #else
+   if (LittleFS.exists("/deviceConfig.txt")) {
+    deviceConfig = false;
+    string Device_ID;
+    uint8_t Address;
+    File file = LittleFS.open("/deviceConfig.txt", "r");
+    if (file) {
+        String line = file.readStringUntil('\n'); // Read the line as a string
+        file.close();
+        line.trim(); // Remove any trailing newline or whitespace
+          int separatorIndex = line.indexOf(':'); // Find the index of the colon separator
+        if (separatorIndex != -1) {
+            Device_ID = line.substring(0, separatorIndex); // Extract client ID
+            Address = line.substring(separatorIndex + 1); // Extract stringLocation
+            Device_ID.trim(); // Trim any whitespace
+            Address.trim(); // Trim any whitespace
+        }
+
+        Device_ID.toCharArray(Device_ID, sizeof(Device_ID));
+        Home_Address = Address;
+    }
+   }
+   else{
+    Serial.println("No stored value found on file, initializing...");
+     //call the introduction  function
+      Introduction();
+   }
+  #endif
+}
+
 void Introduction() {
   bool reply_received = 0;
-  Transmit_To_Bus((TX_Payload*)&Intro);                 //transmit intrduction message
-  while (!reply_received) {                             //loop until a reply is received
+  Transmit_To_Bus((TX_Payload*)&Intro);
+  while (!reply_received) {
     if(RS485Serial.available()){
-      Addressee = Read_Serial_Port();                   //wait for reply
+      Addressee = Read_Serial_Port();
       if(Addressee == Home_Address) {
-        Home_Address = RX_Message_Payload[0];           //set up node parameters
-        Destination_Address = RX_Message_Payload[1];
-        Location = RX_Message_Payload[2];
-        reply_received = 1;                             //set exit condition
+        int colonIndex = -1; 
+        for (int i = 0; i < sizeof(RX_Message_Payload); i++) { 
+          Device_ID[i] = RX_Message_Payload[i];
+          if (RX_Message_Payload[i] == ':') { 
+            colonIndex = i; 
+            break; 
+          } 
+        }
+        Home_Address = RX_Message_Payload[colonIndex+1];
+        int Size_Of = sizeof(RX_Message_Payload);
+        #if defined(ARDUINO_AVR_NANO)
+        EEPROM.write(location_address, Home_Address);
+        EEPROM.write(Size_Address, Size_Of);
+        for(int i = ID_Address; i < ID_Address + Size_Of; i++){
+          EEPROM.write(i, Device_ID[i]);
+        }
+        #else
+        File file = LittleFS.open("/deviceConfig.txt", "w");
+                if (file) {
+                    // Write the payload in 'user:password' format to the file
+                    file.print(RX_Message_Payload); // Each entry goes on a new line
+                    file.print(":Unknown");
+                    file.flush();  // Ensure data is written immediately
+                    file.close();
+                    Serial.println("Device ID written to file: " + RX_Message_Payload);
+                    clientId = receivedMsg.payload;
+                    ping = clientId + " online"; 
+                    usersTopic = "ELEC520/users/update/" + clientId;
+                    
+                } else {
+                    Serial.println("Failed to open and write 'deviceID.txt'.");
+                }
+        reply_received = 1;
       }
     }
   }

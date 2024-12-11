@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 
+extern uint32_t buffno;
 class CharBuffer {
   private:
     int Max_Buff_Size;    // Maximum number of entries in the buffer

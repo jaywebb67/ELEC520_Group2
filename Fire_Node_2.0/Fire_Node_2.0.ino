@@ -1,3 +1,8 @@
+/*
+ *ELEC_520 
+ *authored by Alex Meredith
+*/
+
 #include "Communication_Protocol.h"
 #include "DHT.h"
 
@@ -112,10 +117,10 @@ void loop() {
   
     if(Addressee == Home_Address){
       Serial.println((char*)RX_Message_Payload);
-      Serial.print("Sender's address: ");
-      Serial.println(Sender_Address, HEX);
-      Serial.print("Sender is a node of type: ");
-      Serial.println(Sender_Node_Type, HEX);
+      // Serial.print("Sender's address: ");
+      // Serial.println(Sender_Address, HEX);
+      // Serial.print("Sender is a node of type: ");
+      // Serial.println(Sender_Node_Type, HEX);
       // Handle specific commands
       if (strcmp((char*)RX_Message_Payload, Reset_Cmd) == 0) {
         Serial.println("Restting alarm...");

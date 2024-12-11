@@ -1,3 +1,8 @@
+/*
+ *ELEC_520 
+ *authored by Alex Meredith and Jay Webb
+*/
+
 #include "MQTT.hpp"
 #include "Communication_Protocol.h"
 

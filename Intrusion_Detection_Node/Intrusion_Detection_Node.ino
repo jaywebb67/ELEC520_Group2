@@ -1,3 +1,8 @@
+/*
+ *ELEC_520 
+ *authored by Alex Meredith and Alex Fitzsimons
+*/
+
 #include<Wire.h>
 #include "Communication_Protocol.h"
 

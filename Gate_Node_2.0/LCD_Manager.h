@@ -1,3 +1,8 @@
+/*
+ *ELEC_520 
+ *authored by Alex Meredith
+*/ 
+
 #ifndef LCD_MANAGER_H
 #define LCD_MANAGER_H
 

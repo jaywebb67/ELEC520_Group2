@@ -1,3 +1,8 @@
+/*
+ *ELEC_520 
+ *authored by Jay Webb
+*/ 
+
 #ifndef MQTT_HPP
 #define MQTT_HPP
 

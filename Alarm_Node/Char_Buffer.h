@@ -1,3 +1,5 @@
+
+
 #ifndef CHARBUFFER_H
 #define CHARBUFFER_H
 

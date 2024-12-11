@@ -1,3 +1,8 @@
+/*
+ *ELEC_520 
+ *authored by Alex Meredith
+*/ 
+
 #include "Char_Buffer.h"
 #include <stdio.h>
 #include <cstring> // Ensure cstring is included for string functions
@@ -93,11 +98,13 @@ void CharBuffer::printBuffer() {
     Serial.println("The buffer is empty."); 
     } 
   else { 
-    for (int i = 0; i < Index; i++) { 
+    int i;
+    for ( i = 0; i < Index; i++) { 
       Serial.print("Entry ");
         Serial.print(i); 
         Serial.print(": "); 
         Serial.println(buffer[i]); 
       } 
+      buffno = i;
     } 
   }

@@ -1,3 +1,8 @@
+/*
+ *ELEC_520 
+ *authored by Jay Webb
+*/ 
+
 #include "MQTT.hpp"
 
 String stringLocation = "";

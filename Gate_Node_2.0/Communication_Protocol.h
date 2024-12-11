@@ -1,3 +1,8 @@
+/*
+ *ELEC_520 
+ *authored by Alex Meredith
+*/ 
+
 #ifndef COMMUNICATION_PROTOCOL_H
 #define COMMUNICATION_PROTOCOL_H
 

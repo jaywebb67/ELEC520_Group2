@@ -1,3 +1,8 @@
+/*
+ *ELEC_520 
+ *authored by Alex Meredith
+*/ 
+
 #include "LCD_Manager.h"
 
 #define LCD_I2C_ADDRESS 0x27 
