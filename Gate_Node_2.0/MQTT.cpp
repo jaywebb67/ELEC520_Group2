@@ -163,7 +163,7 @@ void MQTT_task(void* pvParameters) {
             }
         } else {
             // Retry reconnection every 5 minutes
-            if (millis() - lastConnectionAttempt >= 300000) { // 5 minutes
+            if (millis() - lastConnectionAttempt >= 30000) { // 5 minutes
                 lastConnectionAttempt = millis();
                 reconnect(1); // Attempt to reconnect
             }

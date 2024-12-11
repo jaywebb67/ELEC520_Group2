@@ -299,10 +299,10 @@ void Keypad_Read(void *pvParameters) {
           pressedCount++;
           foundRow = row;
           foundCol = col;
-          Serial.print("Row: ");
-          Serial.print(foundRow);
-          Serial.print("Column: ");
-          Serial.println(foundCol);
+          // Serial.print("Row: ");
+          // Serial.print(foundRow);
+          // Serial.print("Column: ");
+          // Serial.println(foundCol);
         }
       }
 
